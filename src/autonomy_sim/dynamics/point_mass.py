@@ -37,4 +37,9 @@ class PointMassDynamics:
         new_x = state.x + avg_vx * dt
         new_y = state.y + avg_vy * dt
 
-        return VehicleState(x=new_x, y=new_y, vx=new_vx, vy=new_vy)
+        return VehicleState(
+            x=float(new_x), 
+            y=float(new_y), 
+            vx=float(new_vx), 
+            vy=float(new_vy)
+        )
