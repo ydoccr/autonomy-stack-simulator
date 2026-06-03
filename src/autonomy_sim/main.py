@@ -1,8 +1,9 @@
 import numpy as np
 
 from autonomy_sim.control.point_mass_acc_controller import PointMassAccController
-from autonomy_sim.core.types import VehicleState, Waypoint
+from autonomy_sim.core.types import VehicleState, Waypoint, SimConfig
 from autonomy_sim.dynamics.point_mass import PointMassDynamics
+from autonomy_sim.visualization.plot_run import plot_trajectory
 
 
 def distance_to_target(state: VehicleState, target: Waypoint) -> float:
@@ -12,8 +13,7 @@ def distance_to_target(state: VehicleState, target: Waypoint) -> float:
 
 
 def run_simulation():
-    dt = 0.1
-    num_steps = 300
+    config = SimConfig(dt=0.1, num_steps=200)
 
     state = VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)
     target = Waypoint(x=10.0, y=10.0)
@@ -23,11 +23,11 @@ def run_simulation():
 
     trajectory = []
 
-    for step in range(num_steps):
-        time = step * dt
+    for step in range(config.num_steps):
+        time = step * config.dt
 
         control = controller.compute_control(state, target)
-        state = dynamics.step(state, control, dt)
+        state = dynamics.step(state, control, config.dt)
 
         trajectory.append(
             {
@@ -47,7 +47,7 @@ def run_simulation():
     print("Simulation complete.")
     print(f"Final state: {state}")
     print(f"Final distance to target: {final_distance:.3f}")
-
+    plot_trajectory(trajectory, target)
     return trajectory
 
 
