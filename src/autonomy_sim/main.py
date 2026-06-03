@@ -6,9 +6,9 @@ from autonomy_sim.guidance.waypoint_tracker import WaypointTracker
 from autonomy_sim.visualization.plot_run import plot_trajectory
 
 def run_simulation():
-    config = SimConfig(dt=0.1, num_steps=600)
-    state = VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)
-    controller = PointMassAccController(kp=1.0, kd=2.0)
+    config = SimConfig(dt=0.1, num_steps=3000)
+    state = VehicleState(x=0.0, y=0.0, vx=0.0, vy=2.0)
+    controller = PointMassAccController(kp=0.5, kd=1)
     dynamics = PointMassDynamics(max_speed=5.0, max_accel=3.0)
     waypoints = [
         Waypoint(x=5.0, y=0.0),

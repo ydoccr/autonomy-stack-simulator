@@ -4,8 +4,8 @@ from autonomy_sim.core.types import Waypoint
 def plot_trajectory(trajectory, waypoints: list[Waypoint]) -> None:
     x_values = [sample["x"] for sample in trajectory]
     y_values = [sample["y"] for sample in trajectory]
-    waypoint_x_values = [waypoint.x for waypoint in waypoints]
-    waypoint_y_values = [waypoint.y for waypoint in waypoints]
+    waypoint_x_values = [x_values[0]] + [waypoint.x for waypoint in waypoints]
+    waypoint_y_values = [y_values[0]] + [waypoint.y for waypoint in waypoints]
     plt.figure(figsize=(8, 8))
     plt.plot(
         x_values,
