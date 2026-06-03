@@ -1,7 +1,8 @@
+import numpy as np
 import matplotlib.pyplot as plt
 from autonomy_sim.core.types import Waypoint
 
-def plot_trajectory(trajectory, waypoints: list[Waypoint]) -> None:
+def plot_trajectory(trajectory, waypoints: list[Waypoint]):
     x_values = [sample["x"] for sample in trajectory]
     y_values = [sample["y"] for sample in trajectory]
     waypoint_x_values = [x_values[0]] + [waypoint.x for waypoint in waypoints]
@@ -30,3 +31,60 @@ def plot_trajectory(trajectory, waypoints: list[Waypoint]) -> None:
     plt.axis("equal")
     plt.show()
 
+def plot_speed(trajectory):
+    time_values = [sample["time"] for sample in trajectory]
+    speed_values = [
+        np.hypot(sample["vx"], sample["vy"]) for sample in trajectory
+    ]
+    plt.figure(figsize=(8, 8))
+    plt.plot(time_values, speed_values)
+    plt.xlabel("Time")
+    plt.ylabel("Speed")
+    plt.title("Speed vs. Time")
+    plt.grid(True)
+    plt.show()
+
+def plot_acceleration(trajectory):
+    time_values = [sample["time"] for sample in trajectory]
+    acceleration_values = [
+        np.hypot(sample["ax_cmd"], sample["ay_cmd"]) for sample in trajectory
+    ]
+    plt.figure(figsize=(8, 8))
+    plt.plot(time_values, acceleration_values)
+    plt.xlabel("Time")
+    plt.ylabel("Control-inflicted acceleration")
+    plt.title("Control-inflicted acceleration vs. Time")
+    plt.grid(True)
+    plt.show()
+
+def plot_waypoint_index(trajectory) -> None:
+    time_values = [sample["time"] for sample in trajectory]
+    waypoint_index_values = [
+        sample["current_waypoint_index"] for sample in trajectory
+    ]
+    plt.figure(figsize=(8, 8))
+    plt.scatter(time_values, waypoint_index_values, s=10)
+    plt.xlabel("Time")
+    plt.ylabel("Current waypoint index")
+    plt.title("Waypoint index vs. Time")
+    plt.grid(True)
+    plt.show()
+
+def plot_distance_to_waypoint(trajectory):
+    plt.figure(figsize=(8, 8))
+    plt.plot(
+        [sample["time"] for sample in trajectory], 
+        [sample["distance_to_waypoint"] for sample in trajectory]
+        )
+    plt.xlabel("Time")
+    plt.ylabel("Distance to current waypoint")
+    plt.title("Waypoint distance vs. Time")
+    plt.grid(True)
+    plt.show()
+
+def plot_all(trajectory, waypoints):
+    plot_trajectory(trajectory, waypoints)
+    plot_speed(trajectory)
+    plot_acceleration(trajectory)
+    plot_waypoint_index(trajectory)
+    plot_distance_to_waypoint(trajectory)

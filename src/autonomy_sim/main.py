@@ -3,7 +3,7 @@ from autonomy_sim.control.point_mass_acc_controller import PointMassAccControlle
 from autonomy_sim.core.types import SimConfig, VehicleState, Waypoint
 from autonomy_sim.dynamics.point_mass import PointMassDynamics
 from autonomy_sim.guidance.waypoint_tracker import WaypointTracker
-from autonomy_sim.visualization.plot_run import plot_trajectory
+from autonomy_sim.visualization.plot_run import plot_trajectory, plot_distance_to_waypoint, plot_speed, plot_acceleration, plot_waypoint_index, plot_all
 
 def run_simulation():
     config = SimConfig(dt=0.1, num_steps=3000)
@@ -53,8 +53,7 @@ def run_simulation():
     print(f"Final distance to final waypoint: {final_distance:.3f}")
     print(f"Final waypoint index: {waypoint_tracker.current_index}")
     print(f"Waypoint path complete: {waypoint_tracker.complete}")
-    plot_trajectory(trajectory, waypoints)
-
+    plot_all(trajectory, waypoints)
     return trajectory
 
 
