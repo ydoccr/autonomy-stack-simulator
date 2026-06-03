@@ -14,21 +14,29 @@ def distance_to_target(state: VehicleState, target: Waypoint) -> float:
 
 def run_simulation():
     config = SimConfig(dt=0.1, num_steps=200)
-
     state = VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)
-    target = Waypoint(x=10.0, y=10.0)
-
     controller = PointMassAccController(kp=1.0, kd=2.0)
     dynamics = PointMassDynamics(max_speed=5.0, max_accel=3.0)
-
+    waypoints = [
+        Waypoint(x=5.0, y=0.0),
+        Waypoint(x=5.0, y=5.0),
+        Waypoint(x=10.0, y=5.0),
+        Waypoint(x=10.0, y=10.0),
+    ]
     trajectory = []
-
+    waypoint_index = 0
+    waypoint_threshold = 0.5
     for step in range(config.num_steps):
         time = step * config.dt
-
-        control = controller.compute_control(state, target)
+        current_waypoint = waypoints[waypoint_index]
+        if np.hypot(state.x - current_waypoint.x, state.y - current_waypoint.y) < waypoint_threshold:
+            if waypoint_index < len(waypoints) - 1:
+                waypoint_index += 1
+                current_waypoint = waypoints[waypoint_index]
+            else:
+                break
+        control = controller.compute_control(state, current_waypoint)
         state = dynamics.step(state, control, config.dt)
-
         trajectory.append(
             {
                 "time": time,
@@ -38,16 +46,17 @@ def run_simulation():
                 "vy": state.vy,
                 "ax_cmd": control.ax,
                 "ay_cmd": control.ay,
-                "distance_to_target": distance_to_target(state, target),
+                "current_waypoint_index": waypoint_index,
+                "distance_to_waypoint": np.hypot(state.x - current_waypoint.x, state.y - current_waypoint.y),
             }
         )
-
-    final_distance = distance_to_target(state, target)
-
+    final_distance = np.hypot(state.x - waypoints[-1].x, state.y - waypoints[-1].y)
     print("Simulation complete.")
     print(f"Final state: {state}")
-    print(f"Final distance to target: {final_distance:.3f}")
-    plot_trajectory(trajectory, target)
+    print(f"Final distance to final waypoint: {final_distance:.3f}")
+    print(f"Final waypoint index: {waypoint_index}")
+    plot_trajectory(trajectory, waypoints)
+
     return trajectory
 
 
