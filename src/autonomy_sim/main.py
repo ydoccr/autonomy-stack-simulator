@@ -6,7 +6,6 @@ from autonomy_sim.guidance.waypoint_tracker import WaypointTracker
 from autonomy_sim.visualization.plot_run import plot_trajectory, plot_distance_to_waypoint, plot_speed, plot_acceleration, plot_waypoint_index, plot_all
 from autonomy_sim.sensors.gaussian_sensor import GaussianSensor
 
-# plot startnig from first timestep rather than t=0
 def run_simulation():
     config = SimConfig(dt=0.1, num_steps=3000)
     state = VehicleState(x=0.0, y=0.0, vx=-1.0, vy=2.0)
@@ -24,7 +23,13 @@ def run_simulation():
     )
     trajectory = []
     sensor = GaussianSensor(pos_noise_std=0.1, vel_noise_std=0.1)
-    initial_sensor_data = sensor.sense(state)
+    sensor_data = sensor.sense(state)
+    estimated_state = VehicleState(
+        x=sensor_data.x_meas,
+        y=sensor_data.y_meas,
+        vx=sensor_data.vx_meas,
+        vy=sensor_data.vy_meas,
+    )
     trajectory.append(
         {
             "time": 0.0,
@@ -32,10 +37,10 @@ def run_simulation():
             "y": state.y,
             "vx": state.vx,
             "vy": state.vy,
-            "x_meas": initial_sensor_data.x_meas,
-            "y_meas": initial_sensor_data.y_meas,
-            "vx_meas": initial_sensor_data.vx_meas,
-            "vy_meas": initial_sensor_data.vy_meas,
+            "x_meas": sensor_data.x_meas,
+            "y_meas": sensor_data.y_meas,
+            "vx_meas": sensor_data.vx_meas,
+            "vy_meas": sensor_data.vy_meas,
             "ax_cmd": 0.0,
             "ay_cmd": 0.0,
             "current_waypoint_index": waypoint_tracker.current_index,
@@ -48,9 +53,15 @@ def run_simulation():
         if waypoint_tracker.complete:
             break
         current_waypoint = waypoint_tracker.current_waypoint()
-        control = controller.compute_control(state, current_waypoint)
+        control = controller.compute_control(estimated_state, current_waypoint)
         state = dynamics.step(state, control, config.dt)
         sensor_data = sensor.sense(state)
+        estimated_state = VehicleState(
+            x=sensor_data.x_meas,
+            y=sensor_data.y_meas,
+            vx=sensor_data.vx_meas,
+            vy=sensor_data.vy_meas,
+        )
         trajectory.append(
             {
                 "time": time,
