@@ -116,6 +116,45 @@ def plot_true_vs_measured_trajectory(trajectory, waypoints: list[Waypoint]):
     plt.axis("equal")
     plt.show()
 
+def plot_true_measured_estimated_trajectory(trajectory, waypoints):
+    true_x_values = [sample["x"] for sample in trajectory]
+    true_y_values = [sample["y"] for sample in trajectory]
+    measured_x_values = [sample["x_meas"] for sample in trajectory]
+    measured_y_values = [sample["y_meas"] for sample in trajectory]
+    estimated_x_values = [sample["x_est"] for sample in trajectory]
+    estimated_y_values = [sample["y_est"] for sample in trajectory]
+    waypoint_x_values = [true_x_values[0]] + [waypoint.x for waypoint in waypoints]
+    waypoint_y_values = [true_y_values[0]] + [waypoint.y for waypoint in waypoints]
+    plt.figure(figsize=(8, 8))
+    plt.plot(true_x_values, true_y_values, label="True trajectory")
+    plt.scatter(
+        measured_x_values,
+        measured_y_values,
+        label="Measured positions",
+        marker=".",
+        s=12,
+    )
+    plt.plot(
+        estimated_x_values,
+        estimated_y_values,
+        label="Estimated trajectory",
+        linestyle="--",
+    )
+    plt.plot(
+        waypoint_x_values,
+        waypoint_y_values,
+        label="Waypoint path",
+        marker="x",
+    )
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("True vs. Measured vs. Estimated trajectory")
+    plt.legend()
+    plt.grid(True)
+    plt.axis("equal")
+    plt.show()
+
+
 def plot_all(trajectory, waypoints):
     plot_trajectory(trajectory, waypoints)
     plot_speed(trajectory)
@@ -123,3 +162,4 @@ def plot_all(trajectory, waypoints):
     plot_waypoint_index(trajectory)
     plot_distance_to_waypoint(trajectory)
     plot_true_vs_measured_trajectory(trajectory, waypoints)
+    plot_true_measured_estimated_trajectory(trajectory, waypoints)

@@ -3,7 +3,7 @@ from autonomy_sim.control.point_mass_acc_controller import PointMassAccControlle
 from autonomy_sim.core.types import SimConfig, VehicleState, Waypoint
 from autonomy_sim.dynamics.point_mass import PointMassDynamics
 from autonomy_sim.guidance.waypoint_tracker import WaypointTracker
-from autonomy_sim.visualization.plot_run import plot_trajectory, plot_distance_to_waypoint, plot_speed, plot_acceleration, plot_waypoint_index, plot_all
+from autonomy_sim.visualization.plot_run import plot_trajectory, plot_distance_to_waypoint, plot_speed, plot_acceleration, plot_waypoint_index, plot_true_vs_measured_trajectory, plot_true_measured_estimated_trajectory, plot_all
 from autonomy_sim.sensors.gaussian_sensor import GaussianSensor
 
 def run_simulation():
@@ -41,6 +41,10 @@ def run_simulation():
             "y_meas": sensor_data.y_meas,
             "vx_meas": sensor_data.vx_meas,
             "vy_meas": sensor_data.vy_meas,
+            "x_est": estimated_state.x,
+            "y_est": estimated_state.y,
+            "vx_est": estimated_state.vx,
+            "vy_est": estimated_state.vy,
             "ax_cmd": 0.0,
             "ay_cmd": 0.0,
             "current_waypoint_index": waypoint_tracker.current_index,
@@ -73,12 +77,14 @@ def run_simulation():
                 "y_meas": sensor_data.y_meas,
                 "vx_meas": sensor_data.vx_meas,
                 "vy_meas": sensor_data.vy_meas,
+                "x_est": estimated_state.x,
+                "y_est": estimated_state.y,
+                "vx_est": estimated_state.vx,
+                "vy_est": estimated_state.vy,
                 "ax_cmd": control.ax,
                 "ay_cmd": control.ay,
                 "current_waypoint_index": waypoint_tracker.current_index,
-                "distance_to_waypoint": waypoint_tracker.distance_to_current_waypoint(
-                    state
-                ),
+                "distance_to_waypoint": waypoint_tracker.distance_to_current_waypoint(state),
             }
         )
     final_waypoint = waypoints[-1]
