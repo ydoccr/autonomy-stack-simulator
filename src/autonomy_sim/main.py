@@ -1,10 +1,11 @@
 import numpy as np
 from autonomy_sim.control.point_mass_acc_controller import PointMassAccController
-from autonomy_sim.core.types import SimConfig, VehicleState, Waypoint
+from autonomy_sim.core.types import SimConfig, VehicleState, Waypoint, ControlInput
 from autonomy_sim.dynamics.point_mass import PointMassDynamics
 from autonomy_sim.guidance.waypoint_tracker import WaypointTracker
 from autonomy_sim.visualization.plot_run import plot_trajectory, plot_distance_to_waypoint, plot_speed, plot_acceleration, plot_waypoint_index, plot_true_vs_measured_trajectory, plot_true_measured_estimated_trajectory, plot_all
 from autonomy_sim.sensors.gaussian_sensor import GaussianSensor
+from autonomy_sim.estimation.kalman_filter import KalmanFilter
 
 def run_simulation():
     config = SimConfig(dt=0.1, num_steps=3000)
@@ -23,13 +24,17 @@ def run_simulation():
     )
     trajectory = []
     sensor = GaussianSensor(pos_noise_std=0.1, vel_noise_std=0.1)
+    kalman_filter = KalmanFilter(dt=config.dt, process_var=1e-3, meas_var=1e-2)
     sensor_data = sensor.sense(state)
-    estimated_state = VehicleState(
+    initial_estimated_state = VehicleState(
         x=sensor_data.x_meas,
         y=sensor_data.y_meas,
         vx=sensor_data.vx_meas,
         vy=sensor_data.vy_meas,
     )
+    kalman_filter.reset(initial_estimated_state)
+    estimated_state = kalman_filter.current_state()
+    previous_control = ControlInput(ax=0.0, ay=0.0)
     trajectory.append(
         {
             "time": 0.0,
@@ -48,7 +53,7 @@ def run_simulation():
             "ax_cmd": 0.0,
             "ay_cmd": 0.0,
             "current_waypoint_index": waypoint_tracker.current_index,
-            "distance_to_waypoint": waypoint_tracker.distance_to_current_waypoint(state),
+            "distance_to_waypoint": waypoint_tracker.distance_to_current_waypoint(estimated_state),
         }
     )
     for step in range(config.num_steps):
@@ -60,12 +65,7 @@ def run_simulation():
         control = controller.compute_control(estimated_state, current_waypoint)
         state = dynamics.step(state, control, config.dt)
         sensor_data = sensor.sense(state)
-        estimated_state = VehicleState(
-            x=sensor_data.x_meas,
-            y=sensor_data.y_meas,
-            vx=sensor_data.vx_meas,
-            vy=sensor_data.vy_meas,
-        )
+        estimated_state = kalman_filter.step(measurement=sensor_data, control=control)
         trajectory.append(
             {
                 "time": time,
