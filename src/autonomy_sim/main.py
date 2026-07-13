@@ -1,71 +1,61 @@
-import numpy as np
-from autonomy_sim.control.point_mass_acc_controller import PointMassAccController
-from autonomy_sim.core.types import SimConfig, VehicleState, Waypoint, ControlInput
-from autonomy_sim.dynamics.point_mass import PointMassDynamics
-from autonomy_sim.guidance.waypoint_tracker import WaypointTracker
-from autonomy_sim.visualization.plot_run import plot_trajectory, plot_distance_to_waypoint, plot_speed, plot_acceleration, plot_waypoint_index, plot_true_vs_measured_trajectory, plot_true_measured_estimated_trajectory, plot_all
-from autonomy_sim.sensors.gaussian_sensor import GaussianSensor
-from autonomy_sim.estimation.kalman_filter import KalmanFilter
+import argparse
+from pathlib import Path
 
-def run_simulation():
-    config = SimConfig(dt=0.1, num_steps=3000)
-    state = VehicleState(x=0.0, y=0.0, vx=-1.0, vy=2.0)
-    controller = PointMassAccController(kp=0.5, kd=1)
-    dynamics = PointMassDynamics(max_speed=5.0, max_accel=3.0)
-    waypoints = [
-        Waypoint(x=5.0, y=0.0),
-        Waypoint(x=5.0, y=5.0),
-        Waypoint(x=10.0, y=5.0),
-        Waypoint(x=10.0, y=10.0),
-    ]
-    waypoint_tracker = WaypointTracker(
-        waypoints=waypoints,
-        waypoint_threshold=0.5,
+import numpy as np
+import yaml
+
+from autonomy_sim.control.point_mass_acc_controller import PointMassAccController
+from autonomy_sim.core.types import SimConfig, VehicleState, Waypoint
+from autonomy_sim.dynamics.point_mass import PointMassDynamics
+from autonomy_sim.estimation.kalman_filter import KalmanFilter
+from autonomy_sim.guidance.waypoint_tracker import WaypointTracker
+from autonomy_sim.sensors.gaussian_sensor import GaussianSensor
+from autonomy_sim.visualization.plot_run import plot_all
+
+DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "configs" / "default.yaml"
+
+
+def load_config(path=DEFAULT_CONFIG):
+    with Path(path).open(encoding="utf-8") as config_file:
+        config = yaml.safe_load(config_file)
+    return config
+
+
+def run_simulation(
+    config_path=DEFAULT_CONFIG,
+    *,
+    show_plots=False,
+    initial_state=None,
+    waypoints=None,
+):
+    settings = load_config(config_path)
+    simulation_settings = settings["simulation"]
+    config = SimConfig(
+        dt=float(simulation_settings["dt"]),
+        num_steps=int(simulation_settings["num_steps"]),
     )
-    trajectory = []
-    sensor = GaussianSensor(pos_noise_std=0.1, vel_noise_std=0.1)
-    kalman_filter = KalmanFilter(dt=config.dt, process_var=1e-3, meas_var=1e-2)
+    if initial_state is None:
+        state = VehicleState(**settings["initial_state"])
+    else:
+        state = initial_state
+    controller = PointMassAccController(**settings["controller"])
+    dynamics = PointMassDynamics(**settings["dynamics"])
+    if waypoints is None:
+        waypoints = [
+            Waypoint(**waypoint) for waypoint in settings["waypoints"]
+        ]
+    waypoint_tracker = WaypointTracker(waypoints, settings["waypoint_threshold"])
+    rng = np.random.default_rng(simulation_settings.get("random_seed"))
+    sensor = GaussianSensor(**settings["sensor"], rng=rng)
+    kalman_filter = KalmanFilter(dt=config.dt, **settings["estimator"])
+
     sensor_data = sensor.sense(state)
-    initial_estimated_state = VehicleState(
-        x=sensor_data.x_meas,
-        y=sensor_data.y_meas,
-        vx=sensor_data.vx_meas,
-        vy=sensor_data.vy_meas,
-    )
-    kalman_filter.reset(initial_estimated_state)
+    kalman_filter.reset(VehicleState.from_array(sensor_data.as_array()))
     estimated_state = kalman_filter.current_state()
-    previous_control = ControlInput(ax=0.0, ay=0.0)
-    trajectory.append(
-        {
-            "time": 0.0,
-            "x": state.x,
-            "y": state.y,
-            "vx": state.vx,
-            "vy": state.vy,
-            "x_meas": sensor_data.x_meas,
-            "y_meas": sensor_data.y_meas,
-            "vx_meas": sensor_data.vx_meas,
-            "vy_meas": sensor_data.vy_meas,
-            "x_est": estimated_state.x,
-            "y_est": estimated_state.y,
-            "vx_est": estimated_state.vx,
-            "vy_est": estimated_state.vy,
-            "ax_cmd": 0.0,
-            "ay_cmd": 0.0,
-            "current_waypoint_index": waypoint_tracker.current_index,
-            "distance_to_waypoint": waypoint_tracker.distance_to_current_waypoint(estimated_state),
-        }
-    )
-    for step in range(config.num_steps):
-        time = (step + 1) * config.dt
-        waypoint_tracker.update(state)
-        if waypoint_tracker.complete:
-            break
-        current_waypoint = waypoint_tracker.current_waypoint()
-        control = controller.compute_control(estimated_state, current_waypoint)
-        state = dynamics.step(state, control, config.dt)
-        sensor_data = sensor.sense(state)
-        estimated_state = kalman_filter.step(measurement=sensor_data, control=control)
+    waypoint_tracker.update(estimated_state)
+    trajectory = []
+
+    def record(time, ax, ay):
         trajectory.append(
             {
                 "time": time,
@@ -81,12 +71,35 @@ def run_simulation():
                 "y_est": estimated_state.y,
                 "vx_est": estimated_state.vx,
                 "vy_est": estimated_state.vy,
-                "ax_cmd": control.ax,
-                "ay_cmd": control.ay,
+                "ax_cmd": ax,
+                "ay_cmd": ay,
                 "current_waypoint_index": waypoint_tracker.current_index,
-                "distance_to_waypoint": waypoint_tracker.distance_to_current_waypoint(state),
+                "distance_to_waypoint": waypoint_tracker.distance_to_current_waypoint(
+                    estimated_state
+                ),
             }
         )
+
+    record(0.0, 0.0, 0.0)
+    for step in range(config.num_steps):
+        if waypoint_tracker.complete:
+            break
+        requested_control = controller.compute_control(
+            estimated_state, waypoint_tracker.current_waypoint()
+        )
+        state = dynamics.step(state, requested_control, config.dt)
+        sensor_data = sensor.sense(state)
+        estimated_state = kalman_filter.step(
+            control=requested_control,
+            measurement=sensor_data,
+        )
+        waypoint_tracker.update(estimated_state)
+        record(
+            (step + 1) * config.dt,
+            requested_control.ax,
+            requested_control.ay,
+        )
+
     final_waypoint = waypoints[-1]
     final_distance = float(
         np.hypot(state.x - final_waypoint.x, state.y - final_waypoint.y)
@@ -96,9 +109,18 @@ def run_simulation():
     print(f"Final distance to final waypoint: {final_distance:.3f}")
     print(f"Final waypoint index: {waypoint_tracker.current_index}")
     print(f"Waypoint path complete: {waypoint_tracker.complete}")
-    plot_all(trajectory, waypoints)
+    if show_plots:
+        plot_all(trajectory, waypoints)
     return trajectory
 
 
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run the waypoint simulation.")
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--plot", action="store_true", help="show result plots")
+    args = parser.parse_args()
+    run_simulation(args.config, show_plots=args.plot)
+
+
 if __name__ == "__main__":
-    run_simulation()
+    main()

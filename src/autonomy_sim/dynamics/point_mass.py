@@ -3,7 +3,8 @@
 # material limitations: max speed, max acceleration
 
 import numpy as np
-from autonomy_sim.core.types import VehicleState, ControlInput
+
+from autonomy_sim.core.types import ControlInput, VehicleState
 
 
 class PointMassDynamics:
@@ -11,7 +12,12 @@ class PointMassDynamics:
         self.max_speed = max_speed
         self.max_acceleration = max_accel
 
-    def step(self, state: VehicleState, control: ControlInput, dt: float) -> VehicleState:
+    def step(
+        self,
+        state: VehicleState,
+        control: ControlInput,
+        dt: float,
+    ) -> VehicleState:
         ax = control.ax
         ay = control.ay
 
@@ -32,14 +38,14 @@ class PointMassDynamics:
             new_vx *= scale
             new_vy *= scale
 
-        avg_vx = 0.5 * (old_vx + new_vx)
-        avg_vy = 0.5 * (old_vy + new_vy)
-        new_x = state.x + avg_vx * dt
-        new_y = state.y + avg_vy * dt
+        average_vx = 0.5 * (old_vx + new_vx)
+        average_vy = 0.5 * (old_vy + new_vy)
+        new_x = state.x + average_vx * dt
+        new_y = state.y + average_vy * dt
 
         return VehicleState(
-            x=float(new_x), 
-            y=float(new_y), 
-            vx=float(new_vx), 
-            vy=float(new_vy)
+            x=float(new_x),
+            y=float(new_y),
+            vx=float(new_vx),
+            vy=float(new_vy),
         )
