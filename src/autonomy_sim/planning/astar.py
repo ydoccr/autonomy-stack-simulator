@@ -12,84 +12,183 @@ def astar(
     goal: GridCell,
     allow_diagonal: bool = True,
     fuel_rate: float = 1.0,
+    max_distance: int = 1,
+    waypoint_cost: float = 0.0,
+    turn_cost_weight: float = 0.0,
+    nominal_speed: float = 1.0,
 ) -> list[GridCell]:
-    _validate_inputs(costmap, start, goal, fuel_rate)
+    _validate_inputs(
+        costmap,
+        start,
+        goal,
+        fuel_rate,
+        max_distance,
+        waypoint_cost,
+        turn_cost_weight,
+        nominal_speed,
+    )
     if start == goal:
         return [start]
 
-    frontier: list[tuple[float, float, GridCell]] = []
+    start_direction = (0, 0)
+    frontier = []
+    push_count = 0
     start_priority = _heuristic(start, goal, fuel_rate)
-    heapq.heappush(frontier, (start_priority, 0.0, start))
+    heapq.heappush(
+        frontier,
+        (start_priority, push_count, 0.0, start, start_direction),
+    )
 
-    came_from: dict[GridCell, GridCell] = {}
-    g_score: dict[GridCell, float] = {start: 0.0}
+    came_from = {}
+    g_score = {start: 0.0}
 
     while frontier:
-        _, queued_cost, current = heapq.heappop(frontier)
+        _, _, queued_cost, current, incoming_direction = heapq.heappop(
+            frontier
+        )
         if queued_cost > g_score[current]:
             continue
         if current == goal:
-            return _reconstruct_path(came_from, goal)
+            return _reconstruct_path(came_from, current)
 
-        for neighbor in _neighbors(costmap, current, allow_diagonal):
-            row_change = neighbor[0] - current[0]
-            col_change = neighbor[1] - current[1]
-            distance = math.hypot(row_change, col_change)
-            environmental_cost = float(costmap[neighbor])
+        neighbors = _neighbors(
+            costmap,
+            current,
+            allow_diagonal,
+            max_distance,
+        )
+        for neighbor, direction, distance, environmental_cost in neighbors:
             # Same cost split as the NASA planner: fuel + environment.
-            edge_cost = distance * (fuel_rate + environmental_cost)
+            travel_cost = distance * (fuel_rate + environmental_cost)
+            turn_cost = _turn_cost(
+                incoming_direction,
+                direction,
+                nominal_speed,
+                turn_cost_weight,
+            )
+            edge_cost = travel_cost + waypoint_cost + turn_cost
             tentative_cost = g_score[current] + edge_cost
 
             if tentative_cost < g_score.get(neighbor, math.inf):
                 came_from[neighbor] = current
                 g_score[neighbor] = tentative_cost
                 priority = tentative_cost + _heuristic(
-                    neighbor, goal, fuel_rate
+                    neighbor,
+                    goal,
+                    fuel_rate,
                 )
+                push_count += 1
                 heapq.heappush(
                     frontier,
-                    (priority, tentative_cost, neighbor),
+                    (
+                        priority,
+                        push_count,
+                        tentative_cost,
+                        neighbor,
+                        direction,
+                    ),
                 )
 
     return []
 
 
-def _neighbors(
-    costmap: np.ndarray,
-    cell: GridCell,
-    allow_diagonal: bool,
-) -> list[GridCell]:
-    row, column = cell
-    offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-    if allow_diagonal:
-        offsets.extend([(-1, -1), (-1, 1), (1, -1), (1, 1)])
-
+def _neighbors(costmap, cell, allow_diagonal, max_distance):
     neighbors = []
     height, width = costmap.shape
-    for row_offset, column_offset in offsets:
-        neighbor_row = row + row_offset
-        neighbor_column = column + column_offset
-        inside_grid = (
-            0 <= neighbor_row < height and 0 <= neighbor_column < width
-        )
-        if not inside_grid:
-            continue
-        if not np.isfinite(costmap[neighbor_row, neighbor_column]):
-            continue
-        neighbors.append((neighbor_row, neighbor_column))
+    row, column = cell
+
+    for row_change in range(-max_distance, max_distance + 1):
+        for column_change in range(-max_distance, max_distance + 1):
+            if row_change == 0 and column_change == 0:
+                continue
+            if not allow_diagonal and row_change != 0 and column_change != 0:
+                continue
+
+            distance = math.hypot(row_change, column_change)
+            if distance > max_distance:
+                continue
+
+            neighbor_row = row + row_change
+            neighbor_column = column + column_change
+            inside_grid = (
+                0 <= neighbor_row < height
+                and 0 <= neighbor_column < width
+            )
+            if not inside_grid:
+                continue
+
+            crossed_cells = _cells_along_edge(
+                cell,
+                (neighbor_row, neighbor_column),
+            )
+            crossed_costs = [costmap[crossed_cell] for crossed_cell in crossed_cells]
+            if not np.all(np.isfinite(crossed_costs)):
+                continue
+
+            environmental_cost = float(np.mean(crossed_costs))
+            direction_divisor = math.gcd(abs(row_change), abs(column_change))
+            direction = (
+                row_change // direction_divisor,
+                column_change // direction_divisor,
+            )
+            neighbors.append(
+                (
+                    (neighbor_row, neighbor_column),
+                    direction,
+                    distance,
+                    environmental_cost,
+                )
+            )
+
     return neighbors
 
 
-def _heuristic(cell: GridCell, goal: GridCell, fuel_rate: float) -> float:
+def _cells_along_edge(start, end):
+    row_change = end[0] - start[0]
+    column_change = end[1] - start[1]
+    number_of_steps = max(abs(row_change), abs(column_change))
+    cells = []
+
+    for step in range(1, number_of_steps + 1):
+        fraction = step / number_of_steps
+        row = round(start[0] + fraction * row_change)
+        column = round(start[1] + fraction * column_change)
+        cell = (row, column)
+        if not cells or cell != cells[-1]:
+            cells.append(cell)
+
+    return cells
+
+
+def _turn_cost(
+    incoming_direction,
+    outgoing_direction,
+    nominal_speed,
+    turn_cost_weight,
+):
+    if incoming_direction == (0, 0):
+        return 0.0
+
+    incoming_length = math.hypot(*incoming_direction)
+    outgoing_length = math.hypot(*outgoing_direction)
+    dot_product = (
+        incoming_direction[0] * outgoing_direction[0]
+        + incoming_direction[1] * outgoing_direction[1]
+    )
+    cosine = dot_product / (incoming_length * outgoing_length)
+    cosine = max(-1.0, min(1.0, cosine))
+    turn_angle = math.acos(cosine)
+    velocity_change = 2.0 * nominal_speed * math.sin(turn_angle / 2.0)
+    return turn_cost_weight * velocity_change
+
+
+def _heuristic(cell, goal, fuel_rate):
     row_distance = goal[0] - cell[0]
     column_distance = goal[1] - cell[1]
     return math.hypot(row_distance, column_distance) * fuel_rate
 
 
-def _reconstruct_path(
-    came_from: dict[GridCell, GridCell],
-    goal: GridCell,
-) -> list[GridCell]:
+def _reconstruct_path(came_from, goal):
     path = [goal]
     current = goal
     while current in came_from:
@@ -100,17 +199,27 @@ def _reconstruct_path(
 
 
 def _validate_inputs(
-    costmap: np.ndarray,
-    start: GridCell,
-    goal: GridCell,
-    fuel_rate: float,
-) -> None:
+    costmap,
+    start,
+    goal,
+    fuel_rate,
+    max_distance,
+    waypoint_cost,
+    turn_cost_weight,
+    nominal_speed,
+):
     if not isinstance(costmap, np.ndarray) or costmap.ndim != 2:
         raise ValueError("costmap must be a two-dimensional NumPy array")
     if np.any(np.isnan(costmap)) or np.any(costmap < 0.0):
         raise ValueError("costmap values must be non-negative or np.inf")
     if fuel_rate <= 0.0:
         raise ValueError("fuel_rate must be positive")
+    if max_distance < 1:
+        raise ValueError("max_distance must be at least one")
+    if waypoint_cost < 0.0 or turn_cost_weight < 0.0:
+        raise ValueError("planning cost weights must be non-negative")
+    if nominal_speed <= 0.0:
+        raise ValueError("nominal_speed must be positive")
 
     height, width = costmap.shape
     for name, cell in (("start", start), ("goal", goal)):

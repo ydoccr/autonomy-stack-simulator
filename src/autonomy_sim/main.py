@@ -27,6 +27,7 @@ def run_simulation(
     show_plots=False,
     initial_state=None,
     waypoints=None,
+    waypoint_threshold=None,
 ):
     settings = load_config(config_path)
     simulation_settings = settings["simulation"]
@@ -44,7 +45,9 @@ def run_simulation(
         waypoints = [
             Waypoint(**waypoint) for waypoint in settings["waypoints"]
         ]
-    waypoint_tracker = WaypointTracker(waypoints, settings["waypoint_threshold"])
+    if waypoint_threshold is None:
+        waypoint_threshold = settings["waypoint_threshold"]
+    waypoint_tracker = WaypointTracker(waypoints, waypoint_threshold)
     rng = np.random.default_rng(simulation_settings.get("random_seed"))
     sensor = GaussianSensor(**settings["sensor"], rng=rng)
     kalman_filter = KalmanFilter(dt=config.dt, **settings["estimator"])
@@ -117,9 +120,8 @@ def run_simulation(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the waypoint simulation.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
-    parser.add_argument("--plot", action="store_true", help="show result plots")
     args = parser.parse_args()
-    run_simulation(args.config, show_plots=args.plot)
+    run_simulation(args.config, show_plots=True)
 
 
 if __name__ == "__main__":

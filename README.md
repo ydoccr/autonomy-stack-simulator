@@ -39,7 +39,6 @@ The default run is headless and uses `configs/default.yaml`:
 
 ```powershell
 python -m autonomy_sim.main
-python -m autonomy_sim.main --plot
 python -m autonomy_sim.main --config configs/default.yaml
 ```
 
@@ -64,11 +63,8 @@ noise. A future actuator interface can expose applied control explicitly.
 ## Verify
 
 ```powershell
-ruff check .
 pytest -q
 ```
-
-CI runs both commands for pushes and pull requests.
 
 ## Current scope
 

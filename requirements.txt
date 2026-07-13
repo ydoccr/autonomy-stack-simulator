@@ -2,4 +2,3 @@
 matplotlib
 pyyaml
 pytest
-ruff

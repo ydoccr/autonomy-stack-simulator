@@ -68,3 +68,34 @@ def test_astar_rejects_obstacle_endpoint():
 
     with np.testing.assert_raises(ValueError):
         astar(costmap, start=(0, 0), goal=(2, 2))
+
+
+def test_max_distance_creates_fewer_straight_path_segments():
+    costmap = create_empty_costmap(width=11, height=1)
+
+    path = astar(
+        costmap,
+        start=(0, 0),
+        goal=(0, 10),
+        allow_diagonal=False,
+        max_distance=5,
+        waypoint_cost=0.1,
+    )
+
+    assert len(path) == 3
+    assert path == [(0, 0), (0, 5), (0, 10)]
+
+
+def test_long_edge_cannot_skip_an_obstacle():
+    costmap = create_empty_costmap(width=5, height=1)
+    costmap[0, 2] = np.inf
+
+    path = astar(
+        costmap,
+        start=(0, 0),
+        goal=(0, 4),
+        allow_diagonal=False,
+        max_distance=4,
+    )
+
+    assert path == []
