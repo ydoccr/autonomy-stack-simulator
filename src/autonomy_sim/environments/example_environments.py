@@ -7,10 +7,11 @@ RESTRICTED_COST = 10000.0
 
 
 class GridEnvironment:
-    def __init__(self, width, height, resolution=1.0):
+    def __init__(self, width, height, resolution=1.0, max_cost=np.inf):
         self.width = width
         self.height = height
         self.resolution = resolution
+        self.max_cost = max_cost
         self.occupied = np.zeros((height, width), dtype=bool)
         self.disallowed = np.zeros((height, width), dtype=bool)
         self.restricted = np.zeros((height, width), dtype=bool)
@@ -32,16 +33,66 @@ class GridEnvironment:
         elif zone != "free":
             raise ValueError("unknown zone type")
 
-    def to_costmap(self):
+    def to_zone_costmap(self):
         costmap = np.zeros((self.height, self.width), dtype=float)
         costmap[self.occupied] = OCCUPIED_COST
         costmap[self.disallowed] = DISALLOWED_COST
         costmap[self.restricted] = RESTRICTED_COST
         return costmap
 
+    def to_costmap(self, proximity_sigma=0.06):
+        zone_costmap = self.to_zone_costmap()
+        if proximity_sigma <= 0.0:
+            return zone_costmap
 
-def create_hallway_environment():
-    environment = GridEnvironment(width=101, height=101, resolution=0.1)
+        sigma_cells = proximity_sigma / self.resolution
+        kernel = _gaussian_kernel(sigma_cells)
+        proximity_cost = _gaussian_blur(zone_costmap, kernel)
+        return zone_costmap + proximity_cost
+
+
+def _gaussian_kernel(sigma_cells):
+    radius = int(np.ceil(3.0 * sigma_cells))
+    offsets = np.arange(-radius, radius + 1, dtype=float)
+    kernel = np.exp(-0.5 * (offsets / sigma_cells) ** 2)
+    return kernel / np.sum(kernel)
+
+
+def _gaussian_blur(costmap, kernel):
+    radius = len(kernel) // 2
+
+    horizontal = np.zeros_like(costmap)
+    padded = np.pad(
+        costmap,
+        ((0, 0), (radius, radius)),
+        mode="edge",
+    )
+    for row in range(costmap.shape[0]):
+        horizontal[row] = np.convolve(padded[row], kernel, mode="valid")
+
+    blurred = np.zeros_like(costmap)
+    padded = np.pad(
+        horizontal,
+        ((radius, radius), (0, 0)),
+        mode="edge",
+    )
+    for column in range(costmap.shape[1]):
+        blurred[:, column] = np.convolve(
+            padded[:, column],
+            kernel,
+            mode="valid",
+        )
+
+    return blurred
+
+
+def create_hallway_environment(max_cost=np.inf):
+    environment = GridEnvironment(
+        width=101,
+        height=101,
+        resolution=0.1,
+        max_cost=max_cost,
+    )
 
     environment.set_zone("occupied", 0, 101, 0, 101)
     environment.set_zone("disallowed", 21, 80, 0, 40)
@@ -51,5 +102,52 @@ def create_hallway_environment():
     environment.set_zone("free", 0, 21, 0, 61)
     environment.set_zone("free", 0, 101, 40, 61)
     environment.set_zone("free", 80, 101, 40, 101)
+
+    return environment
+
+
+def create_random_environment(
+    random_seed=0,
+    width=10,
+    height=10,
+    resolution=0.1,
+    max_cost=np.inf,
+):
+    cells_per_block = round(1.0 / resolution)
+    grid_width = width * cells_per_block
+    grid_height = height * cells_per_block
+    environment = GridEnvironment(
+        width=grid_width,
+        height=grid_height,
+        resolution=resolution,
+        max_cost=max_cost,
+    )
+
+    rng = np.random.default_rng(random_seed)
+    zone_names = ["free", "occupied", "disallowed", "restricted"]
+
+    for block_row in range(height):
+        for block_column in range(width):
+            zone = rng.choice(zone_names)
+
+            is_start_block = block_row == 0 and block_column == 0
+            is_goal_block = (
+                block_row == height - 1
+                and block_column == width - 1
+            )
+            if is_start_block or is_goal_block:
+                zone = "free"
+
+            row_min = block_row * cells_per_block
+            row_max = row_min + cells_per_block
+            col_min = block_column * cells_per_block
+            col_max = col_min + cells_per_block
+            environment.set_zone(
+                zone,
+                row_min,
+                row_max,
+                col_min,
+                col_max,
+            )
 
     return environment

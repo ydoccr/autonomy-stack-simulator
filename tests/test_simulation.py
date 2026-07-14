@@ -19,7 +19,7 @@ def test_headless_simulation_reaches_waypoint(tmp_path: Path):
     config_path = tmp_path / "simulation.yaml"
     config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
 
-    trajectory = run_simulation(config_path)
+    trajectory = run_simulation(config_path, show_metrics=False)
 
     assert len(trajectory) < config["simulation"]["num_steps"]
     assert abs(trajectory[-1]["x"] - 1.0) < 0.3

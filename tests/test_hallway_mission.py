@@ -4,11 +4,12 @@ from autonomy_sim.mission.run_hallway_mission import plan_hallway_mission
 
 
 def test_hallway_mission_path_stays_in_free_cells():
-    _, costmap, grid_path, waypoints = plan_hallway_mission()
+    environment, costmap, grid_path, waypoints = plan_hallway_mission()
 
     assert grid_path[0] == (0, 0)
     assert grid_path[-1] == (100, 100)
-    assert all(costmap[cell] == 0.0 for cell in grid_path)
+    zone_costmap = environment.to_zone_costmap()
+    assert all(zone_costmap[cell] == 0.0 for cell in grid_path)
     assert waypoints[0].x == 0.0
     assert waypoints[0].y == 0.0
     assert waypoints[-1].x == 10.0

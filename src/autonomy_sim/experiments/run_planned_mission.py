@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from autonomy_sim.core.types import VehicleState
+from autonomy_sim.core.types import VehicleState, Waypoint
 from autonomy_sim.main import run_simulation
+from autonomy_sim.metrics.metrics_run import RunMetrics
 from autonomy_sim.planning.astar import astar
 from autonomy_sim.planning.costmap import (
     add_rectangular_cost,
@@ -10,6 +11,10 @@ from autonomy_sim.planning.costmap import (
     create_empty_costmap,
 )
 from autonomy_sim.planning.path_utils import grid_path_to_waypoints
+from autonomy_sim.visualization.plot_run import (
+    add_environment_legend,
+    plot_environment_overlay,
+)
 
 
 def create_scenario():
@@ -37,38 +42,9 @@ def calculate_metrics(
             final_sample["y"] - goal_y,
         )
     )
-
-    position_errors = []
-    acceleration_magnitudes = []
-    for sample in trajectory:
-        error = np.hypot(
-            sample["x"] - sample["x_est"],
-            sample["y"] - sample["y_est"],
-        )
-        position_errors.append(error)
-        acceleration = np.hypot(sample["ax_cmd"], sample["ay_cmd"])
-        acceleration_magnitudes.append(acceleration)
-
-    if len(trajectory) > 1:
-        dt = float(trajectory[1]["time"] - trajectory[0]["time"])
-    else:
-        dt = 0.0
-    squared_errors = np.square(position_errors)
-    control_effort = np.sum(acceleration_magnitudes) * dt
-
-    return {
-        "mission_success": int(final_distance < success_threshold),
-        "completion_time": float(final_sample["time"]),
-        "final_true_distance": final_distance,
-        "mean_estimation_error": float(np.mean(position_errors)),
-        "max_estimation_error": float(np.max(position_errors)),
-        "rmse_estimation_error": float(np.sqrt(np.mean(squared_errors))),
-        "control_effort": float(control_effort),
-        "max_commanded_acceleration": float(
-            np.max(acceleration_magnitudes)
-        ),
-        "number_of_steps": len(trajectory) - 1,
-    }
+    goal = Waypoint(x=goal_x, y=goal_y)
+    path_complete = final_distance < success_threshold
+    return RunMetrics(trajectory, [goal], path_complete).calculate()
 
 
 def plot_planned_mission(
@@ -76,19 +52,13 @@ def plot_planned_mission(
     grid_path,
     trajectory,
 ) -> None:
-    display_costmap = costmap.copy()
-    finite_costs = display_costmap[np.isfinite(display_costmap)]
-    obstacle_display_cost = float(np.max(finite_costs) + 5.0)
-    display_costmap[np.isinf(display_costmap)] = obstacle_display_cost
-
     path_x = [column for row, column in grid_path]
     path_y = [row for row, column in grid_path]
     trajectory_x = [sample["x"] for sample in trajectory]
     trajectory_y = [sample["y"] for sample in trajectory]
 
     plt.figure(figsize=(10, 8))
-    plt.imshow(display_costmap, origin="lower", cmap="YlOrRd")
-    plt.colorbar(label="Environmental cost")
+    plot_environment_overlay(costmap)
     plt.plot(path_x, path_y, "b--", label="A* path")
     plt.plot(trajectory_x, trajectory_y, "g-", label="True trajectory")
     plt.scatter(path_x[0], path_y[0], marker="o", label="Start")
@@ -96,7 +66,7 @@ def plot_planned_mission(
     plt.xlabel("World x / grid column")
     plt.ylabel("World y / grid row")
     plt.title("Risk-aware planned mission")
-    plt.legend()
+    add_environment_legend()
     plt.axis("equal")
     plt.show()
 
@@ -122,6 +92,7 @@ def run_planned_mission(show_plots: bool = False):
     )
     trajectory = run_simulation(
         show_plots=False,
+        show_metrics=False,
         initial_state=initial_state,
         waypoints=waypoints,
     )

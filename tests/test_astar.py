@@ -99,3 +99,39 @@ def test_long_edge_cannot_skip_an_obstacle():
     )
 
     assert path == []
+
+
+def test_long_edge_cannot_cut_through_a_costly_zone():
+    costmap = create_empty_costmap(width=5, height=1)
+    zone_costmap = costmap.copy()
+    costmap[0, 2] = 10.0
+    zone_costmap[0, 2] = 10.0
+
+    path = astar(
+        costmap,
+        start=(0, 0),
+        goal=(0, 4),
+        allow_diagonal=False,
+        max_distance=4,
+        waypoint_cost=0.1,
+        zone_costmap=zone_costmap,
+    )
+
+    assert path[0] == (0, 0)
+    assert path[-1] == (0, 4)
+    assert (0, 2) in path
+    assert path != [(0, 0), (0, 4)]
+
+
+def test_astar_returns_empty_path_above_max_cost():
+    costmap = create_empty_costmap(width=5, height=1)
+
+    path = astar(
+        costmap,
+        start=(0, 0),
+        goal=(0, 4),
+        allow_diagonal=False,
+        max_cost=3.0,
+    )
+
+    assert path == []

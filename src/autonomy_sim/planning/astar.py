@@ -16,6 +16,8 @@ def astar(
     waypoint_cost: float = 0.0,
     turn_cost_weight: float = 0.0,
     nominal_speed: float = 1.0,
+    zone_costmap: np.ndarray | None = None,
+    max_cost: float = np.inf,
 ) -> list[GridCell]:
     _validate_inputs(
         costmap,
@@ -26,6 +28,8 @@ def astar(
         waypoint_cost,
         turn_cost_weight,
         nominal_speed,
+        zone_costmap,
+        max_cost,
     )
     if start == goal:
         return [start]
@@ -56,6 +60,7 @@ def astar(
             current,
             allow_diagonal,
             max_distance,
+            zone_costmap,
         )
         for neighbor, direction, distance, environmental_cost in neighbors:
             # Same cost split as the NASA planner: fuel + environment.
@@ -68,6 +73,8 @@ def astar(
             )
             edge_cost = travel_cost + waypoint_cost + turn_cost
             tentative_cost = g_score[current] + edge_cost
+            if tentative_cost > max_cost:
+                continue
 
             if tentative_cost < g_score.get(neighbor, math.inf):
                 came_from[neighbor] = current
@@ -92,7 +99,13 @@ def astar(
     return []
 
 
-def _neighbors(costmap, cell, allow_diagonal, max_distance):
+def _neighbors(
+    costmap,
+    cell,
+    allow_diagonal,
+    max_distance,
+    zone_costmap,
+):
     neighbors = []
     height, width = costmap.shape
     row, column = cell
@@ -124,6 +137,14 @@ def _neighbors(costmap, cell, allow_diagonal, max_distance):
             crossed_costs = [costmap[crossed_cell] for crossed_cell in crossed_cells]
             if not np.all(np.isfinite(crossed_costs)):
                 continue
+
+            if zone_costmap is not None and len(crossed_cells) > 1:
+                crossed_zone_costs = [
+                    zone_costmap[crossed_cell]
+                    for crossed_cell in crossed_cells
+                ]
+                if np.any(np.asarray(crossed_zone_costs) > 0.0):
+                    continue
 
             environmental_cost = float(np.mean(crossed_costs))
             direction_divisor = math.gcd(abs(row_change), abs(column_change))
@@ -207,6 +228,8 @@ def _validate_inputs(
     waypoint_cost,
     turn_cost_weight,
     nominal_speed,
+    zone_costmap,
+    max_cost,
 ):
     if not isinstance(costmap, np.ndarray) or costmap.ndim != 2:
         raise ValueError("costmap must be a two-dimensional NumPy array")
@@ -220,6 +243,10 @@ def _validate_inputs(
         raise ValueError("planning cost weights must be non-negative")
     if nominal_speed <= 0.0:
         raise ValueError("nominal_speed must be positive")
+    if max_cost <= 0.0:
+        raise ValueError("max_cost must be positive")
+    if zone_costmap is not None and zone_costmap.shape != costmap.shape:
+        raise ValueError("zone_costmap must match the costmap shape")
 
     height, width = costmap.shape
     for name, cell in (("start", start), ("goal", goal)):

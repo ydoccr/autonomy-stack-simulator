@@ -9,8 +9,9 @@ from autonomy_sim.core.types import SimConfig, VehicleState, Waypoint
 from autonomy_sim.dynamics.point_mass import PointMassDynamics
 from autonomy_sim.estimation.kalman_filter import KalmanFilter
 from autonomy_sim.guidance.waypoint_tracker import WaypointTracker
+from autonomy_sim.metrics.metrics_run import RunMetrics
 from autonomy_sim.sensors.gaussian_sensor import GaussianSensor
-from autonomy_sim.visualization.plot_run import plot_all
+from autonomy_sim.visualization.plot_run import plot_all, plot_metrics
 
 DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "configs" / "default.yaml"
 
@@ -25,9 +26,11 @@ def run_simulation(
     config_path=DEFAULT_CONFIG,
     *,
     show_plots=False,
+    show_metrics=True,
     initial_state=None,
     waypoints=None,
     waypoint_threshold=None,
+    environment=None,
 ):
     settings = load_config(config_path)
     simulation_settings = settings["simulation"]
@@ -103,17 +106,19 @@ def run_simulation(
             requested_control.ay,
         )
 
-    final_waypoint = waypoints[-1]
-    final_distance = float(
-        np.hypot(state.x - final_waypoint.x, state.y - final_waypoint.y)
+    run_metrics = RunMetrics(
+        trajectory,
+        waypoints,
+        waypoint_tracker.complete,
     )
-    print("Simulation complete.")
-    print(f"Final state: {state}")
-    print(f"Final distance to final waypoint: {final_distance:.3f}")
-    print(f"Final waypoint index: {waypoint_tracker.current_index}")
-    print(f"Waypoint path complete: {waypoint_tracker.complete}")
+    metrics = run_metrics.calculate()
     if show_plots:
-        plot_all(trajectory, waypoints)
+        displayed_metrics = None
+        if show_metrics:
+            displayed_metrics = metrics
+        plot_all(trajectory, waypoints, environment, displayed_metrics)
+    elif show_metrics:
+        plot_metrics(metrics)
     return trajectory
 
 
