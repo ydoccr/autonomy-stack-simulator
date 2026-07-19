@@ -1,6 +1,7 @@
 import numpy as np
 
 from autonomy_sim.core.types import VehicleState
+from autonomy_sim.environments.example_environments import ZONE_NAMES
 
 
 class RunMetrics:
@@ -10,6 +11,7 @@ class RunMetrics:
         waypoints,
         path_complete,
         goal_tolerance,
+        environment=None,
     ):
         if not trajectory:
             raise ValueError("trajectory must contain at least one sample")
@@ -20,6 +22,7 @@ class RunMetrics:
         self.waypoints = waypoints
         self.path_complete = bool(path_complete)
         self.goal_tolerance = float(goal_tolerance)
+        self.environment = environment
 
     def calculate(self):
         final_sample = self.trajectory[-1]
@@ -79,6 +82,8 @@ class RunMetrics:
             dtype=float,
         )
         planned_path_length = self._path_length(planned_positions)
+        true_zone_time = self._zone_time(times, true_positions)
+        estimated_zone_time = self._zone_time(times, estimated_positions)
 
         control_effort = 0.0
         if len(times) > 1:
@@ -111,6 +116,8 @@ class RunMetrics:
             "number_of_steps": len(self.trajectory) - 1,
             "actual_path_length": actual_path_length,
             "planned_path_length": planned_path_length,
+            "true_zone_time_seconds": true_zone_time,
+            "estimated_zone_time_seconds": estimated_zone_time,
             "measurement_dropout_fraction": float(
                 1.0 - np.mean(measurement_available)
             ),
@@ -134,6 +141,22 @@ class RunMetrics:
             ],
             dtype=float,
         )
+
+    def _zone_time(self, times, positions):
+        if self.environment is None:
+            return None
+
+        zone_time = dict.fromkeys(ZONE_NAMES, 0.0)
+        for index, time_step in enumerate(np.diff(times)):
+            if time_step < 0.0:
+                raise ValueError("trajectory times must be non-decreasing")
+            midpoint = 0.5 * (positions[index] + positions[index + 1])
+            zone = self.environment.zone_at_position(
+                x=midpoint[0],
+                y=midpoint[1],
+            )
+            zone_time[zone] += float(time_step)
+        return zone_time
 
     @staticmethod
     def _path_length(positions):

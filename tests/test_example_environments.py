@@ -19,12 +19,46 @@ def test_hallway_environment_contains_all_zone_types():
     assert np.any(costmap == RESTRICTED_COST)
 
 
+def test_normal_planning_prohibits_disallowed_and_restricted_cells():
+    environment = create_hallway_environment()
+    planning_costmap = environment.to_costmap(proximity_sigma=0.0)
+
+    assert np.all(np.isfinite(planning_costmap[environment.occupied]))
+    assert np.all(np.isinf(planning_costmap[environment.disallowed]))
+    assert np.all(np.isinf(planning_costmap[environment.restricted]))
+
+
+def test_disallowed_cells_can_be_enabled_but_restricted_cells_cannot():
+    environment = create_hallway_environment()
+    planning_costmap = environment.to_costmap(
+        proximity_sigma=0.0,
+        allow_disallowed=True,
+    )
+
+    assert np.all(np.isfinite(planning_costmap[environment.disallowed]))
+    assert np.all(np.isinf(planning_costmap[environment.restricted]))
+
+
 def test_hallway_cells_are_free():
     costmap = create_hallway_environment().to_zone_costmap()
 
     assert np.all(costmap[0:21, 0:61] == 0.0)
     assert np.all(costmap[0:101, 40:61] == 0.0)
     assert np.all(costmap[80:101, 40:101] == 0.0)
+
+
+def test_environment_classifies_world_positions_by_zone():
+    environment = GridEnvironment(width=4, height=1, resolution=1.0)
+    environment.set_zone("occupied", 0, 1, 1, 2)
+    environment.set_zone("disallowed", 0, 1, 2, 3)
+    environment.set_zone("restricted", 0, 1, 3, 4)
+
+    assert environment.zone_at_position(0.5, 0.5) == "free"
+    assert environment.zone_at_position(1.5, 0.5) == "occupied"
+    assert environment.zone_at_position(2.5, 0.5) == "disallowed"
+    assert environment.zone_at_position(3.5, 0.5) == "restricted"
+    assert environment.zone_at_position(-0.1, 0.5) == "out_of_bounds"
+    assert environment.zone_at_position(4.0, 0.5) == "out_of_bounds"
 
 
 def test_hallway_environment_uses_point_one_resolution():

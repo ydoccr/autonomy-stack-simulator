@@ -3,7 +3,14 @@ import numpy as np
 
 OCCUPIED_COST = 10.0
 DISALLOWED_COST = 20.0
-RESTRICTED_COST = 10000.0
+RESTRICTED_COST = np.inf
+ZONE_NAMES = (
+    "free",
+    "occupied",
+    "disallowed",
+    "restricted",
+    "out_of_bounds",
+)
 
 
 class GridEnvironment:
@@ -33,6 +40,19 @@ class GridEnvironment:
         elif zone != "free":
             raise ValueError("unknown zone type")
 
+    def zone_at_position(self, x, y):
+        column = int(np.floor(float(x) / self.resolution))
+        row = int(np.floor(float(y) / self.resolution))
+        if not (0 <= row < self.height and 0 <= column < self.width):
+            return "out_of_bounds"
+        if self.restricted[row, column]:
+            return "restricted"
+        if self.disallowed[row, column]:
+            return "disallowed"
+        if self.occupied[row, column]:
+            return "occupied"
+        return "free"
+
     def to_zone_costmap(self):
         costmap = np.zeros((self.height, self.width), dtype=float)
         costmap[self.occupied] = OCCUPIED_COST
@@ -40,15 +60,26 @@ class GridEnvironment:
         costmap[self.restricted] = RESTRICTED_COST
         return costmap
 
-    def to_costmap(self, proximity_sigma=0.06):
+    def to_costmap(
+        self,
+        proximity_sigma=0.06,
+        allow_disallowed=False,
+    ):
         zone_costmap = self.to_zone_costmap()
-        if proximity_sigma <= 0.0:
-            return zone_costmap
+        proximity_source = zone_costmap.copy()
+        proximity_source[self.restricted] = DISALLOWED_COST
 
-        sigma_cells = proximity_sigma / self.resolution
-        kernel = _gaussian_kernel(sigma_cells)
-        proximity_cost = _gaussian_blur(zone_costmap, kernel)
-        return zone_costmap + proximity_cost
+        planning_costmap = proximity_source
+        if proximity_sigma > 0.0:
+            sigma_cells = proximity_sigma / self.resolution
+            kernel = _gaussian_kernel(sigma_cells)
+            proximity_cost = _gaussian_blur(proximity_source, kernel)
+            planning_costmap = proximity_source + proximity_cost
+
+        planning_costmap[self.restricted] = np.inf
+        if not allow_disallowed:
+            planning_costmap[self.disallowed] = np.inf
+        return planning_costmap
 
 
 def _gaussian_kernel(sigma_cells):

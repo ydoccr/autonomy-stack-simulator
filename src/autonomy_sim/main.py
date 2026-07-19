@@ -144,6 +144,7 @@ def run_simulation(
         waypoints,
         waypoint_tracker.complete,
         waypoint_threshold,
+        environment,
     )
     metrics = run_metrics.calculate()
     if show_plots:

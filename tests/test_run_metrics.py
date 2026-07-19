@@ -1,6 +1,7 @@
 import numpy as np
 
 from autonomy_sim.core.types import Waypoint
+from autonomy_sim.environments.example_environments import GridEnvironment
 from autonomy_sim.metrics.metrics_run import RunMetrics
 
 
@@ -128,3 +129,46 @@ def test_run_metrics_ignores_dropped_measurements():
 
     assert np.isclose(metrics["measurement_dropout_fraction"], 1.0 / 3.0)
     assert metrics["rmse_measurement_error"] == np.sqrt(0.5)
+
+
+def test_run_metrics_accounts_for_true_and_estimated_zone_time():
+    environment = GridEnvironment(width=3, height=1, resolution=1.0)
+    environment.set_zone("occupied", 0, 1, 1, 2)
+    trajectory = create_trajectory()
+    for sample in trajectory:
+        sample["x_est"] = 0.0
+
+    metrics = RunMetrics(
+        trajectory,
+        [Waypoint(x=2.0, y=0.0)],
+        path_complete=True,
+        goal_tolerance=0.2,
+        environment=environment,
+    ).calculate()
+
+    assert metrics["true_zone_time_seconds"] == {
+        "free": 1.0,
+        "occupied": 1.0,
+        "disallowed": 0.0,
+        "restricted": 0.0,
+        "out_of_bounds": 0.0,
+    }
+    assert metrics["estimated_zone_time_seconds"] == {
+        "free": 2.0,
+        "occupied": 0.0,
+        "disallowed": 0.0,
+        "restricted": 0.0,
+        "out_of_bounds": 0.0,
+    }
+
+
+def test_run_metrics_reports_zone_time_as_unavailable_without_environment():
+    metrics = RunMetrics(
+        create_trajectory(),
+        [Waypoint(x=2.0, y=0.0)],
+        path_complete=True,
+        goal_tolerance=0.2,
+    ).calculate()
+
+    assert metrics["true_zone_time_seconds"] is None
+    assert metrics["estimated_zone_time_seconds"] is None
