@@ -41,7 +41,11 @@ def plan_hallway_mission():
     return environment, costmap, grid_path, waypoints
 
 
-def run_hallway_mission(show_plots=True, show_metrics=True):
+def run_hallway_mission(
+    show_plots=True,
+    show_metrics=True,
+    sensor_model=None,
+):
     environment, costmap, grid_path, waypoints = plan_hallway_mission()
 
     initial_state = VehicleState(
@@ -57,6 +61,7 @@ def run_hallway_mission(show_plots=True, show_metrics=True):
         environment=environment,
         show_plots=show_plots,
         show_metrics=show_metrics,
+        sensor_model=sensor_model,
     )
 
     return trajectory, environment, costmap, grid_path, waypoints

@@ -38,6 +38,20 @@ class RunMetrics:
             measured_positions - true_positions,
             axis=1,
         )
+        measurement_available = np.array(
+            [
+                sample.get("measurement_available", True)
+                for sample in self.trajectory
+            ],
+            dtype=bool,
+        )
+        measurement_available = measurement_available & np.all(
+            np.isfinite(measured_positions),
+            axis=1,
+        )
+        valid_measurement_errors = measurement_errors[
+            measurement_available
+        ]
         estimation_errors = np.linalg.norm(
             estimated_positions - true_positions,
             axis=1,
@@ -83,8 +97,11 @@ class RunMetrics:
             "number_of_steps": len(self.trajectory) - 1,
             "actual_path_length": actual_path_length,
             "planned_path_length": planned_path_length,
-            "mean_measurement_error": float(np.mean(measurement_errors)),
-            "rmse_measurement_error": self._rmse(measurement_errors),
+            "measurement_dropout_fraction": float(
+                1.0 - np.mean(measurement_available)
+            ),
+            "mean_measurement_error": self._mean(valid_measurement_errors),
+            "rmse_measurement_error": self._rmse(valid_measurement_errors),
             "mean_estimation_error": float(np.mean(estimation_errors)),
             "max_estimation_error": float(np.max(estimation_errors)),
             "rmse_estimation_error": self._rmse(estimation_errors),
@@ -112,5 +129,13 @@ class RunMetrics:
         return float(np.sum(np.linalg.norm(segments, axis=1)))
 
     @staticmethod
+    def _mean(values):
+        if len(values) == 0:
+            return np.nan
+        return float(np.mean(values))
+
+    @staticmethod
     def _rmse(errors):
+        if len(errors) == 0:
+            return np.nan
         return float(np.sqrt(np.mean(np.square(errors))))

@@ -190,6 +190,7 @@ def plot_metrics_panel(ax, metrics):
         "",
         f"Actual path length: {metrics['actual_path_length']:.3f}",
         f"Planned path length: {metrics['planned_path_length']:.3f}",
+        f"Measurement dropout: {metrics['measurement_dropout_fraction']:.3f}",
         f"Mean sensor error: {metrics['mean_measurement_error']:.3f}",
         f"Sensor RMSE: {metrics['rmse_measurement_error']:.3f}",
         f"Mean estimate error: {metrics['mean_estimation_error']:.3f}",

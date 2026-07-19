@@ -31,6 +31,7 @@ def run_simulation(
     waypoints=None,
     waypoint_threshold=None,
     environment=None,
+    sensor_model=None,
 ):
     settings = load_config(config_path)
     simulation_settings = settings["simulation"]
@@ -51,17 +52,35 @@ def run_simulation(
     if waypoint_threshold is None:
         waypoint_threshold = settings["waypoint_threshold"]
     waypoint_tracker = WaypointTracker(waypoints, waypoint_threshold)
-    rng = np.random.default_rng(simulation_settings.get("random_seed"))
-    sensor = GaussianSensor(**settings["sensor"], rng=rng)
+    if sensor_model is None:
+        rng = np.random.default_rng(simulation_settings.get("random_seed"))
+        sensor = GaussianSensor(**settings["sensor"], rng=rng)
+    else:
+        sensor = sensor_model
     kalman_filter = KalmanFilter(dt=config.dt, **settings["estimator"])
 
     sensor_data = sensor.sense(state)
-    kalman_filter.reset(VehicleState.from_array(sensor_data.as_array()))
+    if sensor_data is None:
+        kalman_filter.reset()
+    else:
+        kalman_filter.reset(VehicleState.from_array(sensor_data.as_array()))
     estimated_state = kalman_filter.current_state()
     waypoint_tracker.update(estimated_state)
     trajectory = []
 
     def record(time, ax, ay):
+        measurement_available = sensor_data is not None
+        if measurement_available:
+            x_meas = sensor_data.x_meas
+            y_meas = sensor_data.y_meas
+            vx_meas = sensor_data.vx_meas
+            vy_meas = sensor_data.vy_meas
+        else:
+            x_meas = np.nan
+            y_meas = np.nan
+            vx_meas = np.nan
+            vy_meas = np.nan
+
         trajectory.append(
             {
                 "time": time,
@@ -69,10 +88,11 @@ def run_simulation(
                 "y": state.y,
                 "vx": state.vx,
                 "vy": state.vy,
-                "x_meas": sensor_data.x_meas,
-                "y_meas": sensor_data.y_meas,
-                "vx_meas": sensor_data.vx_meas,
-                "vy_meas": sensor_data.vy_meas,
+                "x_meas": x_meas,
+                "y_meas": y_meas,
+                "vx_meas": vx_meas,
+                "vy_meas": vy_meas,
+                "measurement_available": measurement_available,
                 "x_est": estimated_state.x,
                 "y_est": estimated_state.y,
                 "vx_est": estimated_state.vx,

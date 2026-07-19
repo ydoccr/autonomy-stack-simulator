@@ -80,6 +80,7 @@ def test_run_metrics_calculates_mission_performance():
     assert metrics["actual_path_length"] == 2.0
     assert metrics["planned_path_length"] == 2.0
     assert metrics["control_effort"] == 2.0
+    assert metrics["measurement_dropout_fraction"] == 0.0
     assert metrics["rmse_measurement_error"] == np.sqrt(2.0 / 3.0)
     assert metrics["rmse_estimation_error"] == np.sqrt(0.25 / 3.0)
 
@@ -93,3 +94,19 @@ def test_run_metrics_reports_time_limit_when_path_is_incomplete():
 
     assert metrics["mission_success"] is False
     assert metrics["termination_state"] == "time_limit"
+
+
+def test_run_metrics_ignores_dropped_measurements():
+    trajectory = create_trajectory()
+    trajectory[1]["measurement_available"] = False
+    trajectory[1]["x_meas"] = np.nan
+    trajectory[1]["y_meas"] = np.nan
+
+    metrics = RunMetrics(
+        trajectory,
+        [Waypoint(x=2.0, y=0.0)],
+        path_complete=True,
+    ).calculate()
+
+    assert np.isclose(metrics["measurement_dropout_fraction"], 1.0 / 3.0)
+    assert metrics["rmse_measurement_error"] == np.sqrt(0.5)
