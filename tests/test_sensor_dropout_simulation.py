@@ -25,13 +25,16 @@ def test_simulation_predicts_when_sensor_measurement_is_dropped(tmp_path: Path):
         rng=np.random.default_rng(2),
     )
 
-    trajectory = run_simulation(
+    result = run_simulation(
         config_path,
         show_plots=False,
         show_metrics=False,
         sensor_model=sensor,
     )
+    trajectory = result.trajectory
 
     assert all(not sample["measurement_available"] for sample in trajectory)
     assert all(np.isnan(sample["x_meas"]) for sample in trajectory)
     assert all(np.isfinite(sample["x_est"]) for sample in trajectory)
+    assert result.metrics["measurement_dropout_fraction"] == 1.0
+    assert result.scenario["sensor_model"] == "SpottySensor"

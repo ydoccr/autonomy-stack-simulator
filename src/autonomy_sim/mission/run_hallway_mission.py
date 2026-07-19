@@ -45,6 +45,7 @@ def run_hallway_mission(
     show_plots=True,
     show_metrics=True,
     sensor_model=None,
+    scenario=None,
 ):
     environment, costmap, grid_path, waypoints = plan_hallway_mission()
 
@@ -54,7 +55,10 @@ def run_hallway_mission(
         vx=0.0,
         vy=0.0,
     )
-    trajectory = run_simulation(
+    scenario_metadata = {"mission": "hallway"}
+    if scenario is not None:
+        scenario_metadata.update(scenario)
+    result = run_simulation(
         initial_state=initial_state,
         waypoints=waypoints,
         waypoint_threshold=0.2,
@@ -62,9 +66,10 @@ def run_hallway_mission(
         show_plots=show_plots,
         show_metrics=show_metrics,
         sensor_model=sensor_model,
+        scenario=scenario_metadata,
     )
 
-    return trajectory, environment, costmap, grid_path, waypoints
+    return result, environment, costmap, grid_path, waypoints
 
 
 if __name__ == "__main__":

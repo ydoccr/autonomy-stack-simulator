@@ -5,6 +5,7 @@
 # V1: only SimConfig, VehicleState, ControlInput, SensorData, Waypoint
 
 from dataclasses import dataclass
+from typing import Any
 # dataclass: __init__, __repr__, __eq__, etc. automatically generated
 
 import numpy as np
@@ -14,6 +15,13 @@ import numpy as np
 class SimConfig:
     dt: float  # time step
     num_steps: int  # total number of steps in the simulation
+
+
+@dataclass
+class SimulationResult:
+    trajectory: list[dict[str, Any]]
+    metrics: dict[str, Any]
+    scenario: dict[str, Any]
 
 @dataclass
 class VehicleState:

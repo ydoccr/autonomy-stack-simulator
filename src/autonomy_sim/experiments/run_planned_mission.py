@@ -1,9 +1,7 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
-from autonomy_sim.core.types import VehicleState, Waypoint
+from autonomy_sim.core.types import VehicleState
 from autonomy_sim.main import run_simulation
-from autonomy_sim.metrics.metrics_run import RunMetrics
 from autonomy_sim.planning.astar import astar
 from autonomy_sim.planning.costmap import (
     add_rectangular_cost,
@@ -27,24 +25,6 @@ def create_scenario():
     start = (1, 1)
     goal = (14, 18)
     return costmap, start, goal
-
-
-def calculate_metrics(
-    trajectory,
-    goal_x,
-    goal_y,
-    success_threshold=0.5,
-):
-    final_sample = trajectory[-1]
-    final_distance = float(
-        np.hypot(
-            final_sample["x"] - goal_x,
-            final_sample["y"] - goal_y,
-        )
-    )
-    goal = Waypoint(x=goal_x, y=goal_y)
-    path_complete = final_distance < success_threshold
-    return RunMetrics(trajectory, [goal], path_complete).calculate()
 
 
 def plot_planned_mission(
@@ -90,25 +70,21 @@ def run_planned_mission(show_plots: bool = False):
         vx=0.0,
         vy=0.0,
     )
-    trajectory = run_simulation(
+    result = run_simulation(
         show_plots=False,
         show_metrics=False,
         initial_state=initial_state,
         waypoints=waypoints,
+        scenario={"mission": "risk_aware_planned"},
     )
 
-    metrics = calculate_metrics(
-        trajectory,
-        goal_x=float(goal[1]),
-        goal_y=float(goal[0]),
-    )
     print("Planned mission metrics:")
-    for name, value in metrics.items():
+    for name, value in result.metrics.items():
         print(f"  {name}: {value}")
 
     if show_plots:
-        plot_planned_mission(costmap, grid_path, trajectory)
-    return trajectory, grid_path, metrics
+        plot_planned_mission(costmap, grid_path, result.trajectory)
+    return result, grid_path
 
 
 if __name__ == "__main__":

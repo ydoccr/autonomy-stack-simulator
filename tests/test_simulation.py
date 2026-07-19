@@ -19,8 +19,17 @@ def test_headless_simulation_reaches_waypoint(tmp_path: Path):
     config_path = tmp_path / "simulation.yaml"
     config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
 
-    trajectory = run_simulation(config_path, show_metrics=False)
+    result = run_simulation(
+        config_path,
+        show_metrics=False,
+        scenario={"mission": "test"},
+    )
+    trajectory = result.trajectory
 
     assert len(trajectory) < config["simulation"]["num_steps"]
     assert abs(trajectory[-1]["x"] - 1.0) < 0.3
     assert trajectory[-1]["current_waypoint_index"] == 0
+    assert result.metrics["true_mission_success"] is True
+    assert result.scenario["mission"] == "test"
+    assert result.scenario["simulation_seed"] == 1
+    assert result.scenario["sensor_model"] == "GaussianSensor"

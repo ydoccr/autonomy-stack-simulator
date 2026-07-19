@@ -15,6 +15,10 @@ def run_hallway_sensor_scenario(
         show_plots=show_plots,
         show_metrics=show_metrics,
         sensor_model=sensor,
+        scenario={
+            "sensor_scenario": scenario_number,
+            "sensor_seed": random_seed,
+        },
     )
 
 

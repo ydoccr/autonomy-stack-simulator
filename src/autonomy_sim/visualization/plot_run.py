@@ -178,8 +178,8 @@ def plot_metrics_panel(ax, metrics):
     final_state = metrics["final_state"]
     lines = [
         f"Termination: {metrics['termination_state']}",
-        f"Mission success: {metrics['mission_success']}",
-        f"Path complete: {metrics['waypoint_path_complete']}",
+        f"True mission success: {metrics['true_mission_success']}",
+        f"Onboard completion: {metrics['onboard_completion']}",
         f"Completion time: {metrics['completion_time']:.2f} s",
         f"Simulation steps: {metrics['number_of_steps']}",
         "",

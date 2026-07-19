@@ -55,6 +55,7 @@ def run_random_mission(
     show_plots=True,
     show_metrics=True,
     sensor_model=None,
+    scenario=None,
 ):
     environment, costmap, grid_path, waypoints = plan_random_mission(
         random_seed=random_seed,
@@ -67,7 +68,14 @@ def run_random_mission(
         vx=0.0,
         vy=0.0,
     )
-    trajectory = run_simulation(
+    scenario_metadata = {
+        "mission": "random",
+        "environment_seed": random_seed,
+        "max_cost": max_cost,
+    }
+    if scenario is not None:
+        scenario_metadata.update(scenario)
+    result = run_simulation(
         initial_state=initial_state,
         waypoints=waypoints,
         waypoint_threshold=0.2,
@@ -75,9 +83,10 @@ def run_random_mission(
         show_plots=show_plots,
         show_metrics=show_metrics,
         sensor_model=sensor_model,
+        scenario=scenario_metadata,
     )
 
-    return trajectory, environment, costmap, grid_path, waypoints
+    return result, environment, costmap, grid_path, waypoints
 
 
 def main():

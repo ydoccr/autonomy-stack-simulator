@@ -5,7 +5,12 @@ import numpy as np
 import yaml
 
 from autonomy_sim.control.point_mass_acc_controller import PointMassAccController
-from autonomy_sim.core.types import SimConfig, VehicleState, Waypoint
+from autonomy_sim.core.types import (
+    SimConfig,
+    SimulationResult,
+    VehicleState,
+    Waypoint,
+)
 from autonomy_sim.dynamics.point_mass import PointMassDynamics
 from autonomy_sim.estimation.kalman_filter import KalmanFilter
 from autonomy_sim.guidance.waypoint_tracker import WaypointTracker
@@ -32,7 +37,8 @@ def run_simulation(
     waypoint_threshold=None,
     environment=None,
     sensor_model=None,
-):
+    scenario=None,
+) -> SimulationResult:
     settings = load_config(config_path)
     simulation_settings = settings["simulation"]
     config = SimConfig(
@@ -57,6 +63,13 @@ def run_simulation(
         sensor = GaussianSensor(**settings["sensor"], rng=rng)
     else:
         sensor = sensor_model
+    scenario_metadata = {
+        "config_path": str(Path(config_path)),
+        "simulation_seed": simulation_settings.get("random_seed"),
+        "sensor_model": type(sensor).__name__,
+    }
+    if scenario is not None:
+        scenario_metadata.update(scenario)
     kalman_filter = KalmanFilter(dt=config.dt, **settings["estimator"])
 
     sensor_data = sensor.sense(state)
@@ -130,6 +143,7 @@ def run_simulation(
         trajectory,
         waypoints,
         waypoint_tracker.complete,
+        waypoint_threshold,
     )
     metrics = run_metrics.calculate()
     if show_plots:
@@ -139,7 +153,11 @@ def run_simulation(
         plot_all(trajectory, waypoints, environment, displayed_metrics)
     elif show_metrics:
         plot_metrics(metrics)
-    return trajectory
+    return SimulationResult(
+        trajectory=trajectory,
+        metrics=metrics,
+        scenario=scenario_metadata,
+    )
 
 
 def main() -> None:

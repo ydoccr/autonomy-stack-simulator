@@ -4,7 +4,13 @@ from autonomy_sim.core.types import VehicleState
 
 
 class RunMetrics:
-    def __init__(self, trajectory, waypoints, path_complete):
+    def __init__(
+        self,
+        trajectory,
+        waypoints,
+        path_complete,
+        goal_tolerance,
+    ):
         if not trajectory:
             raise ValueError("trajectory must contain at least one sample")
         if not waypoints:
@@ -13,6 +19,7 @@ class RunMetrics:
         self.trajectory = trajectory
         self.waypoints = waypoints
         self.path_complete = bool(path_complete)
+        self.goal_tolerance = float(goal_tolerance)
 
     def calculate(self):
         final_sample = self.trajectory[-1]
@@ -80,19 +87,26 @@ class RunMetrics:
                 np.sum(acceleration_magnitudes[1:] * time_steps)
             )
 
+        onboard_completion = self.path_complete
+        true_mission_success = final_distance < self.goal_tolerance
+
         termination_state = "time_limit"
-        if self.path_complete:
+        if onboard_completion and true_mission_success:
             termination_state = "goal_reached"
+        elif onboard_completion:
+            termination_state = "false_completion"
+        elif true_mission_success:
+            termination_state = "unrecognized_goal_reached"
 
         return {
-            "mission_success": self.path_complete,
+            "onboard_completion": onboard_completion,
+            "true_mission_success": true_mission_success,
             "termination_state": termination_state,
             "final_state": final_state,
             "final_true_distance": final_distance,
             "final_waypoint_index": int(
                 final_sample["current_waypoint_index"]
             ),
-            "waypoint_path_complete": self.path_complete,
             "completion_time": float(final_sample["time"]),
             "number_of_steps": len(self.trajectory) - 1,
             "actual_path_length": actual_path_length,

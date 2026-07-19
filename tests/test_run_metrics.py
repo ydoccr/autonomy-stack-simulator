@@ -72,9 +72,11 @@ def test_run_metrics_calculates_mission_performance():
         trajectory,
         [Waypoint(x=2.0, y=0.0)],
         path_complete=True,
+        goal_tolerance=0.2,
     ).calculate()
 
-    assert metrics["mission_success"] is True
+    assert metrics["onboard_completion"] is True
+    assert metrics["true_mission_success"] is True
     assert metrics["termination_state"] == "goal_reached"
     assert metrics["final_true_distance"] == 0.0
     assert metrics["actual_path_length"] == 2.0
@@ -90,10 +92,25 @@ def test_run_metrics_reports_time_limit_when_path_is_incomplete():
         create_trajectory(),
         [Waypoint(x=3.0, y=0.0)],
         path_complete=False,
+        goal_tolerance=0.2,
     ).calculate()
 
-    assert metrics["mission_success"] is False
+    assert metrics["onboard_completion"] is False
+    assert metrics["true_mission_success"] is False
     assert metrics["termination_state"] == "time_limit"
+
+
+def test_run_metrics_distinguishes_false_onboard_completion():
+    metrics = RunMetrics(
+        create_trajectory(),
+        [Waypoint(x=3.0, y=0.0)],
+        path_complete=True,
+        goal_tolerance=0.2,
+    ).calculate()
+
+    assert metrics["onboard_completion"] is True
+    assert metrics["true_mission_success"] is False
+    assert metrics["termination_state"] == "false_completion"
 
 
 def test_run_metrics_ignores_dropped_measurements():
@@ -106,6 +123,7 @@ def test_run_metrics_ignores_dropped_measurements():
         trajectory,
         [Waypoint(x=2.0, y=0.0)],
         path_complete=True,
+        goal_tolerance=0.2,
     ).calculate()
 
     assert np.isclose(metrics["measurement_dropout_fraction"], 1.0 / 3.0)

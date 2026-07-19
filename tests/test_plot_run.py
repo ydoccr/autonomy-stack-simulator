@@ -17,7 +17,12 @@ def test_plot_all_uses_one_dashboard_window(monkeypatch):
 
     trajectory = create_trajectory()
     waypoints = [Waypoint(x=2.0, y=0.0)]
-    metrics = RunMetrics(trajectory, waypoints, True).calculate()
+    metrics = RunMetrics(
+        trajectory,
+        waypoints,
+        True,
+        goal_tolerance=0.5,
+    ).calculate()
     plot_all(trajectory, waypoints, metrics=metrics)
 
     assert len(plt.get_fignums()) == 1
@@ -41,7 +46,12 @@ def test_metrics_can_use_a_window_without_plots(monkeypatch):
     monkeypatch.setattr(plt, "show", lambda: show_calls.append(True))
     trajectory = create_trajectory()
     waypoints = [Waypoint(x=2.0, y=0.0)]
-    metrics = RunMetrics(trajectory, waypoints, True).calculate()
+    metrics = RunMetrics(
+        trajectory,
+        waypoints,
+        True,
+        goal_tolerance=0.5,
+    ).calculate()
 
     plot_metrics(metrics)
 
