@@ -93,19 +93,43 @@ class RunMetrics:
             )
 
         onboard_completion = self.path_complete
-        true_mission_success = final_distance < self.goal_tolerance
+        true_goal_reached = final_distance < self.goal_tolerance
+        if true_zone_time is None:
+            restricted_violation = None
+            disallowed_violation = None
+            out_of_bounds_violation = None
+            safety_violation = False
+        else:
+            restricted_violation = true_zone_time["restricted"] > 0.0
+            disallowed_violation = true_zone_time["disallowed"] > 0.0
+            out_of_bounds_violation = (
+                true_zone_time["out_of_bounds"] > 0.0
+            )
+            safety_violation = (
+                restricted_violation
+                or disallowed_violation
+                or out_of_bounds_violation
+            )
+        true_mission_success = true_goal_reached and not safety_violation
 
         termination_state = "time_limit"
         if onboard_completion and true_mission_success:
             termination_state = "goal_reached"
-        elif onboard_completion:
+        elif safety_violation and true_goal_reached:
+            termination_state = "safety_violation"
+        elif onboard_completion and not true_goal_reached:
             termination_state = "false_completion"
-        elif true_mission_success:
+        elif true_goal_reached:
             termination_state = "unrecognized_goal_reached"
 
         return {
+            "planning_success": True,
             "onboard_completion": onboard_completion,
+            "true_goal_reached": true_goal_reached,
             "true_mission_success": true_mission_success,
+            "restricted_violation": restricted_violation,
+            "disallowed_violation": disallowed_violation,
+            "out_of_bounds_violation": out_of_bounds_violation,
             "termination_state": termination_state,
             "final_state": final_state,
             "final_true_distance": final_distance,

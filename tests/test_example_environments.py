@@ -1,7 +1,9 @@
 import numpy as np
+import pytest
 
 from autonomy_sim.environments.example_environments import (
     DISALLOWED_COST,
+    DEFAULT_RANDOM_ZONE_PROBABILITIES,
     GridEnvironment,
     OCCUPIED_COST,
     RESTRICTED_COST,
@@ -141,6 +143,55 @@ def test_random_environment_contains_each_zone_type():
     assert np.any(costmap == OCCUPIED_COST)
     assert np.any(costmap == DISALLOWED_COST)
     assert np.any(costmap == RESTRICTED_COST)
+
+
+def test_random_environment_uses_biased_default_probabilities():
+    environment = create_random_environment(
+        random_seed=3,
+        width=100,
+        height=100,
+        resolution=1.0,
+    )
+    total_cells = environment.width * environment.height
+    observed = {
+        "occupied": np.mean(environment.occupied),
+        "disallowed": np.mean(environment.disallowed),
+        "restricted": np.mean(environment.restricted),
+    }
+    observed["free"] = 1.0 - sum(observed.values())
+
+    assert total_cells == 10000
+    for zone, probability in DEFAULT_RANDOM_ZONE_PROBABILITIES.items():
+        assert np.isclose(observed[zone], probability, atol=0.02)
+
+
+def test_random_environment_accepts_custom_zone_probabilities():
+    probabilities = {
+        "free": 1.0,
+        "occupied": 0.0,
+        "disallowed": 0.0,
+        "restricted": 0.0,
+    }
+
+    environment = create_random_environment(
+        random_seed=4,
+        zone_probabilities=probabilities,
+    )
+
+    assert np.all(environment.to_zone_costmap() == 0.0)
+    assert environment.zone_probabilities == probabilities
+
+
+def test_random_environment_rejects_invalid_zone_probabilities():
+    with pytest.raises(ValueError, match="sum to one"):
+        create_random_environment(
+            zone_probabilities={
+                "free": 0.5,
+                "occupied": 0.5,
+                "disallowed": 0.5,
+                "restricted": 0.5,
+            }
+        )
 
 
 def test_environment_stores_max_cost():

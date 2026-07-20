@@ -2,7 +2,7 @@ import argparse
 
 import numpy as np
 
-from autonomy_sim.core.types import VehicleState
+from autonomy_sim.core.types import SimulationResult, VehicleState
 from autonomy_sim.environments.example_environments import (
     create_random_environment,
 )
@@ -11,10 +11,15 @@ from autonomy_sim.planning.astar import astar
 from autonomy_sim.planning.path_utils import grid_path_to_waypoints
 
 
-def plan_random_mission(random_seed=0, max_cost=np.inf):
+def plan_random_mission(
+    random_seed=0,
+    max_cost=np.inf,
+    zone_probabilities=None,
+):
     environment = create_random_environment(
         random_seed=random_seed,
         max_cost=max_cost,
+        zone_probabilities=zone_probabilities,
     )
     costmap = environment.to_costmap()
     zone_costmap = environment.to_zone_costmap()
@@ -39,13 +44,12 @@ def plan_random_mission(random_seed=0, max_cost=np.inf):
         zone_costmap=zone_costmap,
         max_cost=environment.max_cost,
     )
-    if not grid_path:
-        raise RuntimeError("random mission goal is unreachable within max_cost")
-
-    waypoints = grid_path_to_waypoints(
-        grid_path,
-        resolution=environment.resolution,
-    )
+    waypoints = []
+    if grid_path:
+        waypoints = grid_path_to_waypoints(
+            grid_path,
+            resolution=environment.resolution,
+        )
     return environment, costmap, grid_path, waypoints
 
 
@@ -56,10 +60,12 @@ def run_random_mission(
     show_metrics=True,
     sensor_model=None,
     scenario=None,
+    zone_probabilities=None,
 ):
     environment, costmap, grid_path, waypoints = plan_random_mission(
         random_seed=random_seed,
         max_cost=max_cost,
+        zone_probabilities=zone_probabilities,
     )
 
     initial_state = VehicleState(
@@ -72,9 +78,23 @@ def run_random_mission(
         "mission": "random",
         "environment_seed": random_seed,
         "max_cost": max_cost,
+        "zone_probabilities": environment.zone_probabilities,
     }
     if scenario is not None:
         scenario_metadata.update(scenario)
+    if not grid_path:
+        scenario_metadata["sensor_model"] = (
+            "GaussianSensor"
+            if sensor_model is None
+            else type(sensor_model).__name__
+        )
+        result = SimulationResult(
+            trajectory=[],
+            metrics=_planning_failure_metrics(),
+            scenario=scenario_metadata,
+        )
+        return result, environment, costmap, grid_path, waypoints
+
     result = run_simulation(
         initial_state=initial_state,
         waypoints=waypoints,
@@ -87,6 +107,24 @@ def run_random_mission(
     )
 
     return result, environment, costmap, grid_path, waypoints
+
+
+def _planning_failure_metrics():
+    return {
+        "planning_success": False,
+        "onboard_completion": False,
+        "true_goal_reached": False,
+        "true_mission_success": False,
+        "restricted_violation": None,
+        "disallowed_violation": None,
+        "out_of_bounds_violation": None,
+        "termination_state": "planning_failure",
+        "completion_time": np.nan,
+        "rmse_estimation_error": np.nan,
+        "control_effort": np.nan,
+        "true_zone_time_seconds": None,
+        "estimated_zone_time_seconds": None,
+    }
 
 
 def main():

@@ -11,6 +11,13 @@ ZONE_NAMES = (
     "restricted",
     "out_of_bounds",
 )
+RANDOM_ZONE_NAMES = ("free", "occupied", "disallowed", "restricted")
+DEFAULT_RANDOM_ZONE_PROBABILITIES = {
+    "free": 0.65,
+    "occupied": 0.20,
+    "disallowed": 0.10,
+    "restricted": 0.05,
+}
 
 
 class GridEnvironment:
@@ -143,6 +150,7 @@ def create_random_environment(
     height=10,
     resolution=0.1,
     max_cost=np.inf,
+    zone_probabilities=None,
 ):
     cells_per_block = round(1.0 / resolution)
     grid_width = width * cells_per_block
@@ -154,12 +162,19 @@ def create_random_environment(
         max_cost=max_cost,
     )
 
+    probabilities = _random_zone_probabilities(zone_probabilities)
+    environment.zone_probabilities = {
+        name: float(probability)
+        for name, probability in zip(RANDOM_ZONE_NAMES, probabilities)
+    }
     rng = np.random.default_rng(random_seed)
-    zone_names = ["free", "occupied", "disallowed", "restricted"]
 
     for block_row in range(height):
         for block_column in range(width):
-            zone = rng.choice(zone_names)
+            zone = rng.choice(
+                RANDOM_ZONE_NAMES,
+                p=probabilities,
+            )
 
             is_start_block = block_row == 0 and block_column == 0
             is_goal_block = (
@@ -182,3 +197,23 @@ def create_random_environment(
             )
 
     return environment
+
+
+def _random_zone_probabilities(zone_probabilities):
+    if zone_probabilities is None:
+        zone_probabilities = DEFAULT_RANDOM_ZONE_PROBABILITIES
+    if set(zone_probabilities) != set(RANDOM_ZONE_NAMES):
+        raise ValueError(
+            "zone_probabilities must define free, occupied, disallowed, "
+            "and restricted"
+        )
+
+    probabilities = np.array(
+        [zone_probabilities[name] for name in RANDOM_ZONE_NAMES],
+        dtype=float,
+    )
+    if not np.all(np.isfinite(probabilities)) or np.any(probabilities < 0.0):
+        raise ValueError("zone probabilities must be finite and non-negative")
+    if not np.isclose(np.sum(probabilities), 1.0):
+        raise ValueError("zone probabilities must sum to one")
+    return probabilities
