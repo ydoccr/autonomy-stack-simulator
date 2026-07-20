@@ -203,6 +203,9 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# Generated experiment output
+results/
+
 # AI coding-agent metadata and instructions
 .agents/
 .codex/

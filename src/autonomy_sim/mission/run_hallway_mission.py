@@ -15,9 +15,7 @@ def plan_hallway_mission():
     start = (0, 0)
     goal = (100, 100)
     max_waypoint_distance = 1.0
-    max_distance_cells = round(
-        max_waypoint_distance / environment.resolution
-    )
+    max_distance_cells = round(max_waypoint_distance / environment.resolution)
     grid_path = astar(
         costmap,
         start,

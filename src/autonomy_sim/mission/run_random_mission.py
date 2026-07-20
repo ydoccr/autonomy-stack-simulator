@@ -27,9 +27,7 @@ def plan_random_mission(
     start = (0, 0)
     goal = (environment.height - 1, environment.width - 1)
     max_waypoint_distance = 0.5
-    max_distance_cells = round(
-        max_waypoint_distance / environment.resolution
-    )
+    max_distance_cells = round(max_waypoint_distance / environment.resolution)
 
     grid_path = astar(
         costmap,
@@ -84,9 +82,7 @@ def run_random_mission(
         scenario_metadata.update(scenario)
     if not grid_path:
         scenario_metadata["sensor_model"] = (
-            "GaussianSensor"
-            if sensor_model is None
-            else type(sensor_model).__name__
+            "GaussianSensor" if sensor_model is None else type(sensor_model).__name__
         )
         result = SimulationResult(
             trajectory=[],

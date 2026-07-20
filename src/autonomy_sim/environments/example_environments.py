@@ -177,10 +177,7 @@ def create_random_environment(
             )
 
             is_start_block = block_row == 0 and block_column == 0
-            is_goal_block = (
-                block_row == height - 1
-                and block_column == width - 1
-            )
+            is_goal_block = block_row == height - 1 and block_column == width - 1
             if is_start_block or is_goal_block:
                 zone = "free"
 
@@ -204,8 +201,7 @@ def _random_zone_probabilities(zone_probabilities):
         zone_probabilities = DEFAULT_RANDOM_ZONE_PROBABILITIES
     if set(zone_probabilities) != set(RANDOM_ZONE_NAMES):
         raise ValueError(
-            "zone_probabilities must define free, occupied, disallowed, "
-            "and restricted"
+            "zone_probabilities must define free, occupied, disallowed, and restricted"
         )
 
     probabilities = np.array(

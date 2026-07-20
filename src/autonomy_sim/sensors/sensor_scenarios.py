@@ -6,7 +6,6 @@ from autonomy_sim.sensors.gaussian_sensor import GaussianSensor
 from autonomy_sim.sensors.offset_sensor import OffsetSensor
 from autonomy_sim.sensors.spotty_sensor import SpottySensor
 
-# EVENTUALLY: want to make parameter entry happen at runtime
 
 def create_sensor_scenario(scenario_number, random_seed=7):
     if scenario_number == 1:

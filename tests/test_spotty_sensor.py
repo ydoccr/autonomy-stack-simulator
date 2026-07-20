@@ -25,9 +25,7 @@ def test_spotty_sensor_can_drop_every_measurement():
         rng=np.random.default_rng(1),
     )
 
-    measurement = sensor.sense(
-        VehicleState(x=1.0, y=2.0, vx=3.0, vy=4.0)
-    )
+    measurement = sensor.sense(VehicleState(x=1.0, y=2.0, vx=3.0, vy=4.0))
 
     assert measurement is None
 

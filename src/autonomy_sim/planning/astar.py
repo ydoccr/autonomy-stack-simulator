@@ -47,9 +47,7 @@ def astar(
     g_score = {start: 0.0}
 
     while frontier:
-        _, _, queued_cost, current, incoming_direction = heapq.heappop(
-            frontier
-        )
+        _, _, queued_cost, current, incoming_direction = heapq.heappop(frontier)
         if queued_cost > g_score[current]:
             continue
         if current == goal:
@@ -123,10 +121,7 @@ def _neighbors(
 
             neighbor_row = row + row_change
             neighbor_column = column + column_change
-            inside_grid = (
-                0 <= neighbor_row < height
-                and 0 <= neighbor_column < width
-            )
+            inside_grid = 0 <= neighbor_row < height and 0 <= neighbor_column < width
             if not inside_grid:
                 continue
 
@@ -140,8 +135,7 @@ def _neighbors(
 
             if zone_costmap is not None and len(crossed_cells) > 1:
                 crossed_zone_costs = [
-                    zone_costmap[crossed_cell]
-                    for crossed_cell in crossed_cells
+                    zone_costmap[crossed_cell] for crossed_cell in crossed_cells
                 ]
                 if np.any(np.asarray(crossed_zone_costs) > 0.0):
                     continue

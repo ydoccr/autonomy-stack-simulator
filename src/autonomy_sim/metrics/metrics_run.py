@@ -49,19 +49,14 @@ class RunMetrics:
             axis=1,
         )
         measurement_available = np.array(
-            [
-                sample.get("measurement_available", True)
-                for sample in self.trajectory
-            ],
+            [sample.get("measurement_available", True) for sample in self.trajectory],
             dtype=bool,
         )
         measurement_available = measurement_available & np.all(
             np.isfinite(measured_positions),
             axis=1,
         )
-        valid_measurement_errors = measurement_errors[
-            measurement_available
-        ]
+        valid_measurement_errors = measurement_errors[measurement_available]
         estimation_errors = np.linalg.norm(
             estimated_positions - true_positions,
             axis=1,
@@ -88,9 +83,7 @@ class RunMetrics:
         control_effort = 0.0
         if len(times) > 1:
             time_steps = np.diff(times)
-            control_effort = float(
-                np.sum(acceleration_magnitudes[1:] * time_steps)
-            )
+            control_effort = float(np.sum(acceleration_magnitudes[1:] * time_steps))
 
         onboard_completion = self.path_complete
         true_goal_reached = final_distance < self.goal_tolerance
@@ -102,13 +95,9 @@ class RunMetrics:
         else:
             restricted_violation = true_zone_time["restricted"] > 0.0
             disallowed_violation = true_zone_time["disallowed"] > 0.0
-            out_of_bounds_violation = (
-                true_zone_time["out_of_bounds"] > 0.0
-            )
+            out_of_bounds_violation = true_zone_time["out_of_bounds"] > 0.0
             safety_violation = (
-                restricted_violation
-                or disallowed_violation
-                or out_of_bounds_violation
+                restricted_violation or disallowed_violation or out_of_bounds_violation
             )
         true_mission_success = true_goal_reached and not safety_violation
 
@@ -133,36 +122,27 @@ class RunMetrics:
             "termination_state": termination_state,
             "final_state": final_state,
             "final_true_distance": final_distance,
-            "final_waypoint_index": int(
-                final_sample["current_waypoint_index"]
-            ),
+            "final_waypoint_index": int(final_sample["current_waypoint_index"]),
             "completion_time": float(final_sample["time"]),
             "number_of_steps": len(self.trajectory) - 1,
             "actual_path_length": actual_path_length,
             "planned_path_length": planned_path_length,
             "true_zone_time_seconds": true_zone_time,
             "estimated_zone_time_seconds": estimated_zone_time,
-            "measurement_dropout_fraction": float(
-                1.0 - np.mean(measurement_available)
-            ),
+            "measurement_dropout_fraction": float(1.0 - np.mean(measurement_available)),
             "mean_measurement_error": self._mean(valid_measurement_errors),
             "rmse_measurement_error": self._rmse(valid_measurement_errors),
             "mean_estimation_error": float(np.mean(estimation_errors)),
             "max_estimation_error": float(np.max(estimation_errors)),
             "rmse_estimation_error": self._rmse(estimation_errors),
             "control_effort": control_effort,
-            "max_commanded_acceleration": float(
-                np.max(acceleration_magnitudes)
-            ),
+            "max_commanded_acceleration": float(np.max(acceleration_magnitudes)),
             "max_speed": float(np.max(speeds)),
         }
 
     def _values(self, first_name, second_name):
         return np.array(
-            [
-                [sample[first_name], sample[second_name]]
-                for sample in self.trajectory
-            ],
+            [[sample[first_name], sample[second_name]] for sample in self.trajectory],
             dtype=float,
         )
 

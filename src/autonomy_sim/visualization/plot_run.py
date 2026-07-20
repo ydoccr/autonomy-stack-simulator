@@ -4,9 +4,7 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
 
 from autonomy_sim.environments.example_environments import (
-    DISALLOWED_COST,
     OCCUPIED_COST,
-    RESTRICTED_COST,
 )
 
 ENVIRONMENT_COLORS = [
@@ -24,9 +22,8 @@ def plot_environment_overlay(costmap, resolution=1.0, ax=None):
     zone_grid = np.zeros(costmap.shape, dtype=int)
     finite_positive = (costmap > 0.0) & np.isfinite(costmap)
     zone_grid[finite_positive] = 1
-    zone_grid[costmap == DISALLOWED_COST] = 1
     zone_grid[costmap == OCCUPIED_COST] = 2
-    zone_grid[(costmap == RESTRICTED_COST) | np.isinf(costmap)] = 3
+    zone_grid[np.isinf(costmap)] = 3
 
     height, width = costmap.shape
     extent = [
@@ -156,9 +153,7 @@ def plot_distance_to_waypoint(ax, trajectory):
 
 def plot_waypoint_index(ax, trajectory):
     time = [sample["time"] for sample in trajectory]
-    waypoint_index = [
-        sample["current_waypoint_index"] for sample in trajectory
-    ]
+    waypoint_index = [sample["current_waypoint_index"] for sample in trajectory]
 
     ax.step(time, waypoint_index, where="post")
     ax.set_xlabel("Time (s)")
@@ -248,10 +243,7 @@ def plot_all(trajectory, waypoints, environment=None, metrics=None):
 
 def _pairs(trajectory, first_name, second_name):
     return np.array(
-        [
-            [sample[first_name], sample[second_name]]
-            for sample in trajectory
-        ],
+        [[sample[first_name], sample[second_name]] for sample in trajectory],
         dtype=float,
     )
 

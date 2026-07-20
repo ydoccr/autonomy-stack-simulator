@@ -1,58 +1,35 @@
-## Goals
-UAV GNC simulation stack, combining planning, guidance, control, estimation, mission logic, failure injection, logging, visualization, and experiment analysis.
+# Design
 
-## V1 System Architecture
-Mission Manager
-Planner
-Guidance
-Controller
-Vehicle Dynamics
-Sensors
-State Estimation
-Analytic tools (simulation, data, visualization)
+The simulator models a UAV traveling through a hazardous 2-D environment. It
+separates path planning, waypoint guidance, feedback control, dynamics, sensing,
+state estimation, and analysis.
 
-### Mission Manager
-High-level mission logic.
-- PLAN_PATH -> A*, 2d costmap
-- TRACK_PATH -> list?
-- REPLAN -> boolean
-- SUCCESS -> boolean
+## Simulation flow
 
-### Guidance
-One layer below path planning; waypoint tracking & following. Outputs desired velocity.
+1. Build an environment and costmap.
+2. Plan a path with A* and convert it to waypoints.
+3. Use the estimated state for waypoint guidance and PD control.
+4. Apply acceleration and speed limits in the point-mass dynamics.
+5. Generate sensor measurements and update the Kalman filter.
+6. Record the true, measured, and estimated states.
+7. Calculate mission, safety, estimation, and control metrics.
 
-### Controller
-One layer below guidance; desired velocity tracking & following. 
-V1 controller: PD.
+The vehicle state is `[x, y, vx, vy]`, and the control input is `[ax, ay]`.
 
-### Vehicle Dynamics
-TRUE vehicle state, including:
-- state: [x, y, vx, vy]
-- control: [ax, ay]
+## Zone policy
 
-### Sensors
-For now, just generate noisy measurements from the true vehicle state. (Gaussian error maybe? Research real-world)
+- Free cells have no environmental cost.
+- Occupied cells are hazardous but traversable.
+- Disallowed cells are blocked during normal planning but may support a future
+  emergency mode.
+- Restricted cells are always prohibited.
 
-### State Estimator
-Estimates the vehicle state from noisy measurements and control inputs. Simple Kalman filtering approach.
+True zone exposure determines safety outcomes. Estimated exposure records what
+the onboard system believed.
 
-### Analytic Tools
-Records simulation data and produces plots/metrics.
-- outcome (time, elapsed, path optimality, control effort, replan #, etc)
-- path created
-- data table
+## Planned extensions
 
-
-## Workflow
-Goal: UAV must travel A -> B with optimal planning strategy under hazardous conditions.
-
-1. Build costmap, plan A*.
-3. Move along the path using relevant modules.
-5. Log true states, estimated states, control inputs, mission flags, etc.
-6. Perform data analysis.
-
-## Future Goals
-- Maximal realism (sensor, battery, actuator inaccuracies and degradations)
-- different controllers
-- moving hazards
-- Degradations: wrt time? inherent faultiness?
+- Separate commanded and applied control with an actuator model.
+- Add wind and other external disturbances.
+- Add emergency routing through disallowed zones.
+- Port the fixed-rate guidance, estimation, control, and dynamics loop to C++.

@@ -41,9 +41,7 @@ def test_combined_sensor_applies_all_error_types():
     expected_rng = np.random.default_rng(4)
     expected_x = 1.0 + expected_rng.normal(0.0, 0.1)
 
-    measurement = sensor.sense(
-        VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)
-    )
+    measurement = sensor.sense(VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0))
 
     assert measurement is not None
     assert measurement.x_meas == expected_x
@@ -57,8 +55,6 @@ def test_combined_sensor_returns_none_when_spotty_sensor_drops_data():
         )
     )
 
-    measurement = sensor.sense(
-        VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)
-    )
+    measurement = sensor.sense(VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0))
 
     assert measurement is None

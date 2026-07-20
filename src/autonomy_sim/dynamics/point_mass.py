@@ -1,7 +1,3 @@
-# takes state, controlinput, dt. returns next state.
-
-# material limitations: max speed, max acceleration
-
 import numpy as np
 
 from autonomy_sim.core.types import ControlInput, VehicleState

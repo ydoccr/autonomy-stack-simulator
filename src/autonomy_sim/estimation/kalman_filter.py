@@ -1,14 +1,3 @@
-# discrete-time linear Kalman filter for 2D point-mass model
-
-# State vector: [x, y, vx, vy].
-# Motion model uses constant-acceleration control input u = [ax, ay].
-
-# Provides `predict` and `update` methods that accept the project's
-# `ControlInput` and `SensorData` types and return `VehicleState` estimates.
-
-
-from typing import Optional
-
 import numpy as np
 
 from autonomy_sim.core.types import ControlInput, SensorData, VehicleState
@@ -67,8 +56,8 @@ class KalmanFilter:
 
     def reset(
         self,
-        state: Optional[VehicleState] = None,
-        P: Optional[np.ndarray] = None,
+        state: VehicleState | None = None,
+        P: np.ndarray | None = None,
     ) -> None:
         """Reset the filter state and covariance."""
         if state is None:
@@ -83,7 +72,7 @@ class KalmanFilter:
 
     def predict(
         self,
-        control: Optional[ControlInput] = None,
+        control: ControlInput | None = None,
     ) -> VehicleState:
         """Prediction step using optional acceleration control.
 
@@ -107,11 +96,7 @@ class KalmanFilter:
         measurement_array = measurement.as_array()
         innovation = measurement_array - self.H @ self.x
         innovation_covariance = self.H @ self.P @ self.H.T + self.R
-        kalman_gain = (
-            self.P
-            @ self.H.T
-            @ np.linalg.inv(innovation_covariance)
-        )
+        kalman_gain = self.P @ self.H.T @ np.linalg.inv(innovation_covariance)
 
         self.x = self.x + kalman_gain @ innovation
         identity = np.eye(4, dtype=float)
@@ -121,8 +106,8 @@ class KalmanFilter:
 
     def step(
         self,
-        control: Optional[ControlInput] = None,
-        measurement: Optional[SensorData] = None,
+        control: ControlInput | None = None,
+        measurement: SensorData | None = None,
     ) -> VehicleState:
         """Perform a single Kalman filter step: predict and optionally update.
 

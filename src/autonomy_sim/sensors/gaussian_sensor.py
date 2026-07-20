@@ -2,6 +2,7 @@ import numpy as np
 
 from autonomy_sim.core.types import SensorData, VehicleState
 
+
 class GaussianSensor:
     def __init__(
         self,

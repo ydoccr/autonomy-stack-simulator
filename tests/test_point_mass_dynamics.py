@@ -18,7 +18,7 @@ def test_zero_control_keeps_velocity_constant():
     assert next_state.vy == 0.0
 
 
-def test_saturation():
+def test_speed_is_limited():
     dynamics = PointMassDynamics(max_speed=2.0, max_accel=100.0)
 
     state = VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)
@@ -30,7 +30,7 @@ def test_saturation():
     assert speed <= 2.0
 
 
-def test_saturation2():
+def test_acceleration_is_limited():
     dynamics = PointMassDynamics(max_speed=100.0, max_accel=2.0)
 
     state = VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)

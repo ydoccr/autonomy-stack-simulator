@@ -52,9 +52,7 @@ def run_simulation(
     controller = PointMassAccController(**settings["controller"])
     dynamics = PointMassDynamics(**settings["dynamics"])
     if waypoints is None:
-        waypoints = [
-            Waypoint(**waypoint) for waypoint in settings["waypoints"]
-        ]
+        waypoints = [Waypoint(**waypoint) for waypoint in settings["waypoints"]]
     if waypoint_threshold is None:
         waypoint_threshold = settings["waypoint_threshold"]
     waypoint_tracker = WaypointTracker(waypoints, waypoint_threshold)
@@ -148,9 +146,7 @@ def run_simulation(
     )
     metrics = run_metrics.calculate()
     if show_plots:
-        displayed_metrics = None
-        if show_metrics:
-            displayed_metrics = metrics
+        displayed_metrics = metrics if show_metrics else None
         plot_all(trajectory, waypoints, environment, displayed_metrics)
     elif show_metrics:
         plot_metrics(metrics)

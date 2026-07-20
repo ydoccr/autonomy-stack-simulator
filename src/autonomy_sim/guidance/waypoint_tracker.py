@@ -1,7 +1,5 @@
-# should track waypoints & logic, including current waypoint, threshold, iteration, relevant booleans, etc.
-# warning for later: final waypoint maybe should have different threshold?
-
 import numpy as np
+
 from autonomy_sim.core.types import VehicleState, Waypoint
 
 
