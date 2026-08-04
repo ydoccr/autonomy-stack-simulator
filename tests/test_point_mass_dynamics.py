@@ -40,3 +40,20 @@ def test_acceleration_is_limited():
 
     velocity_change = np.hypot(next_state.vx - state.vx, next_state.vy - state.vy)
     assert velocity_change <= 2.0
+
+
+def test_step_reports_acceleration_applied_after_limits():
+    dynamics = PointMassDynamics(max_speed=2.0, max_accel=100.0)
+
+    state = VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)
+    requested_control = ControlInput(ax=10.0, ay=0.0)
+
+    next_state, applied_control = dynamics.step_with_applied_control(
+        state,
+        requested_control,
+        dt=1.0,
+    )
+
+    assert next_state.vx == 2.0
+    assert applied_control.ax == 2.0
+    assert applied_control.ay == 0.0

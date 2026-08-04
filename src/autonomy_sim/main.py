@@ -124,10 +124,14 @@ def run_simulation(
         requested_control = controller.compute_control(
             estimated_state, waypoint_tracker.current_waypoint()
         )
-        state = dynamics.step(state, requested_control, config.dt)
+        state, applied_control = dynamics.step_with_applied_control(
+            state,
+            requested_control,
+            config.dt,
+        )
         sensor_data = sensor.sense(state)
         estimated_state = kalman_filter.step(
-            control=requested_control,
+            control=applied_control,
             measurement=sensor_data,
         )
         waypoint_tracker.update(estimated_state)

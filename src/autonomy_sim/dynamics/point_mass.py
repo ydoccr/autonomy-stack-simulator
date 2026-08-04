@@ -14,6 +14,15 @@ class PointMassDynamics:
         control: ControlInput,
         dt: float,
     ) -> VehicleState:
+        next_state, _ = self.step_with_applied_control(state, control, dt)
+        return next_state
+
+    def step_with_applied_control(
+        self,
+        state: VehicleState,
+        control: ControlInput,
+        dt: float,
+    ) -> tuple[VehicleState, ControlInput]:
         ax = control.ax
         ay = control.ay
 
@@ -34,14 +43,26 @@ class PointMassDynamics:
             new_vx *= scale
             new_vy *= scale
 
+        if dt == 0.0:
+            applied_ax = ax
+            applied_ay = ay
+        else:
+            applied_ax = (new_vx - old_vx) / dt
+            applied_ay = (new_vy - old_vy) / dt
+
         average_vx = 0.5 * (old_vx + new_vx)
         average_vy = 0.5 * (old_vy + new_vy)
         new_x = state.x + average_vx * dt
         new_y = state.y + average_vy * dt
 
-        return VehicleState(
+        next_state = VehicleState(
             x=float(new_x),
             y=float(new_y),
             vx=float(new_vx),
             vy=float(new_vy),
         )
+        applied_control = ControlInput(
+            ax=float(applied_ax),
+            ay=float(applied_ay),
+        )
+        return next_state, applied_control
