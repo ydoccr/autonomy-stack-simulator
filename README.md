@@ -46,6 +46,17 @@ The random seed, vehicle limits, sensor noise, estimator variances, controller
 gains, and waypoint route are configurable in YAML. The Python API is headless
 when both display options are disabled.
 
+The YAML also names each configured subsystem with a `type` field. The current
+supported stack is `point_mass_acceleration` control, `point_mass` dynamics,
+`gaussian` sensing, `kalman_filter` estimation, and `waypoint_tracker` guidance.
+Unknown types fail explicitly instead of silently running a different model.
+Configuration loading also rejects missing sections, non-finite values,
+non-positive timing and vehicle limits, invalid noise or covariance values,
+empty waypoint routes, and non-positive waypoint thresholds. Every configuration
+must use the complete schema shown in `configs/default.yaml`, including each
+subsystem's `type`, the `guidance` section, and an explicit `random_seed` field.
+Set `random_seed` to `null` only when nondeterministic execution is intentional.
+
 Run the risk-aware planned mission with:
 
 ```powershell

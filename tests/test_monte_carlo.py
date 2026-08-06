@@ -56,6 +56,7 @@ def fake_mission_runner(
             "completion_time": np.nan,
             "rmse_estimation_error": np.nan,
             "control_effort": np.nan,
+            "measurement_dropout_fraction": np.nan,
             "true_zone_time_seconds": None,
             "estimated_zone_time_seconds": None,
             "restricted_violation": None,

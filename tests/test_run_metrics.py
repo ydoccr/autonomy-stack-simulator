@@ -2,7 +2,7 @@ import numpy as np
 
 from autonomy_sim.core.types import Waypoint
 from autonomy_sim.environments.example_environments import GridEnvironment
-from autonomy_sim.metrics.metrics_run import RunMetrics
+from autonomy_sim.metrics.metrics_run import RUN_METRIC_FIELDS, RunMetrics
 
 
 def create_trajectory():
@@ -17,6 +17,7 @@ def create_trajectory():
             "y_meas": 0.0,
             "vx_meas": 0.0,
             "vy_meas": 0.0,
+            "measurement_available": True,
             "x_est": 0.0,
             "y_est": 0.0,
             "vx_est": 0.0,
@@ -36,6 +37,7 @@ def create_trajectory():
             "y_meas": 0.0,
             "vx_meas": 1.1,
             "vy_meas": 0.0,
+            "measurement_available": True,
             "x_est": 0.5,
             "y_est": 0.0,
             "vx_est": 0.9,
@@ -55,6 +57,7 @@ def create_trajectory():
             "y_meas": 0.0,
             "vx_meas": 1.0,
             "vy_meas": 0.0,
+            "measurement_available": True,
             "x_est": 2.0,
             "y_est": 0.0,
             "vx_est": 1.0,
@@ -76,6 +79,7 @@ def test_run_metrics_calculates_mission_performance():
         goal_tolerance=0.2,
     ).calculate()
 
+    assert tuple(metrics) == RUN_METRIC_FIELDS
     assert metrics["planning_success"] is True
     assert metrics["onboard_completion"] is True
     assert metrics["true_goal_reached"] is True

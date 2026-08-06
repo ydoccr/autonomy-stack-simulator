@@ -96,44 +96,65 @@ def flatten_trial_result(
 ):
     metrics = result.metrics
     scenario = result.scenario
-    probabilities = scenario.get("zone_probabilities", {})
-    true_zone_time = metrics.get("true_zone_time_seconds") or {}
-    estimated_zone_time = metrics.get("estimated_zone_time_seconds") or {}
+    probabilities = scenario["zone_probabilities"]
+    true_zone_time = metrics["true_zone_time_seconds"]
+    estimated_zone_time = metrics["estimated_zone_time_seconds"]
 
     row = {
         "trial": int(trial),
         "environment_seed": int(environment_seed),
         "sensor_seed": int(sensor_seed),
         "sensor_scenario": int(sensor_scenario),
-        "sensor_model": scenario.get("sensor_model"),
-        "free_probability": probabilities.get("free"),
-        "occupied_probability": probabilities.get("occupied"),
-        "disallowed_probability": probabilities.get("disallowed"),
-        "restricted_probability": probabilities.get("restricted"),
-        "planning_success": metrics.get("planning_success", False),
-        "onboard_completion": metrics.get("onboard_completion", False),
-        "true_goal_reached": metrics.get("true_goal_reached", False),
-        "true_mission_success": metrics.get("true_mission_success", False),
-        "termination_state": metrics.get("termination_state"),
-        "completion_time": metrics.get("completion_time"),
-        "rmse_estimation_error": metrics.get("rmse_estimation_error"),
-        "control_effort": metrics.get("control_effort"),
-        "measurement_dropout_fraction": metrics.get("measurement_dropout_fraction"),
-        "true_free_time": true_zone_time.get("free"),
-        "true_occupied_time": true_zone_time.get("occupied"),
-        "true_disallowed_time": true_zone_time.get("disallowed"),
-        "true_restricted_time": true_zone_time.get("restricted"),
-        "true_out_of_bounds_time": true_zone_time.get("out_of_bounds"),
-        "estimated_free_time": estimated_zone_time.get("free"),
-        "estimated_occupied_time": estimated_zone_time.get("occupied"),
-        "estimated_disallowed_time": estimated_zone_time.get("disallowed"),
-        "estimated_restricted_time": estimated_zone_time.get("restricted"),
-        "estimated_out_of_bounds_time": estimated_zone_time.get("out_of_bounds"),
-        "restricted_violation": metrics.get("restricted_violation"),
-        "disallowed_violation": metrics.get("disallowed_violation"),
-        "out_of_bounds_violation": metrics.get("out_of_bounds_violation"),
+        "sensor_model": scenario["sensor_model"],
+        "free_probability": probabilities["free"],
+        "occupied_probability": probabilities["occupied"],
+        "disallowed_probability": probabilities["disallowed"],
+        "restricted_probability": probabilities["restricted"],
+        "planning_success": metrics["planning_success"],
+        "onboard_completion": metrics["onboard_completion"],
+        "true_goal_reached": metrics["true_goal_reached"],
+        "true_mission_success": metrics["true_mission_success"],
+        "termination_state": metrics["termination_state"],
+        "completion_time": metrics["completion_time"],
+        "rmse_estimation_error": metrics["rmse_estimation_error"],
+        "control_effort": metrics["control_effort"],
+        "measurement_dropout_fraction": metrics["measurement_dropout_fraction"],
+        "true_free_time": _zone_time_value(true_zone_time, "free"),
+        "true_occupied_time": _zone_time_value(true_zone_time, "occupied"),
+        "true_disallowed_time": _zone_time_value(true_zone_time, "disallowed"),
+        "true_restricted_time": _zone_time_value(true_zone_time, "restricted"),
+        "true_out_of_bounds_time": _zone_time_value(
+            true_zone_time,
+            "out_of_bounds",
+        ),
+        "estimated_free_time": _zone_time_value(estimated_zone_time, "free"),
+        "estimated_occupied_time": _zone_time_value(
+            estimated_zone_time,
+            "occupied",
+        ),
+        "estimated_disallowed_time": _zone_time_value(
+            estimated_zone_time,
+            "disallowed",
+        ),
+        "estimated_restricted_time": _zone_time_value(
+            estimated_zone_time,
+            "restricted",
+        ),
+        "estimated_out_of_bounds_time": _zone_time_value(
+            estimated_zone_time,
+            "out_of_bounds",
+        ),
+        "restricted_violation": metrics["restricted_violation"],
+        "disallowed_violation": metrics["disallowed_violation"],
+        "out_of_bounds_violation": metrics["out_of_bounds_violation"],
     }
     return row
+
+
+def _zone_time_value(zone_time, zone):
+    if zone_time is None:
+        return None
+    return zone_time[zone]
 
 
 def summarize_trials(rows, base_seed, sensor_scenario):

@@ -10,12 +10,13 @@ def test_zero_control_keeps_velocity_constant():
     state = VehicleState(x=0.0, y=0.0, vx=2.0, vy=0.0)
     control = ControlInput(ax=0.0, ay=0.0)
 
-    next_state = dynamics.step(state, control, dt=1.0)
+    next_state, applied_control = dynamics.step(state, control, dt=1.0)
 
     assert next_state.x == 2.0
     assert next_state.y == 0.0
     assert next_state.vx == 2.0
     assert next_state.vy == 0.0
+    assert applied_control == control
 
 
 def test_speed_is_limited():
@@ -24,7 +25,7 @@ def test_speed_is_limited():
     state = VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)
     control = ControlInput(ax=10.0, ay=0.0)
 
-    next_state = dynamics.step(state, control, dt=1.0)
+    next_state, _ = dynamics.step(state, control, dt=1.0)
 
     speed = np.hypot(next_state.vx, next_state.vy)
     assert speed <= 2.0
@@ -36,7 +37,7 @@ def test_acceleration_is_limited():
     state = VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)
     control = ControlInput(ax=10.0, ay=0.0)
 
-    next_state = dynamics.step(state, control, dt=1.0)
+    next_state, _ = dynamics.step(state, control, dt=1.0)
 
     velocity_change = np.hypot(next_state.vx - state.vx, next_state.vy - state.vy)
     assert velocity_change <= 2.0
@@ -48,7 +49,7 @@ def test_step_reports_acceleration_applied_after_limits():
     state = VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0)
     requested_control = ControlInput(ax=10.0, ay=0.0)
 
-    next_state, applied_control = dynamics.step_with_applied_control(
+    next_state, applied_control = dynamics.step(
         state,
         requested_control,
         dt=1.0,

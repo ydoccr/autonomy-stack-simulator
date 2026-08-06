@@ -6,6 +6,11 @@ import yaml
 
 from autonomy_sim.control.point_mass_acc_controller import PointMassAccController
 from autonomy_sim.core.types import (
+    ControllerConfig,
+    DynamicsConfig,
+    EstimatorConfig,
+    GuidanceConfig,
+    SensorConfig,
     SimConfig,
     SimulationResult,
     VehicleState,
@@ -24,7 +29,51 @@ DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "configs" / "default.yaml
 def load_config(path=DEFAULT_CONFIG):
     with Path(path).open(encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
-    return config
+    return SimConfig.from_dict(config)
+
+
+def build_controller(config: ControllerConfig):
+    if config.type == "point_mass_acceleration":
+        return PointMassAccController(kp=config.kp, kd=config.kd)
+    raise ValueError(f"unsupported controller type: {config.type!r}")
+
+
+def build_dynamics(config: DynamicsConfig):
+    if config.type == "point_mass":
+        return PointMassDynamics(
+            max_speed=config.max_speed,
+            max_accel=config.max_accel,
+        )
+    raise ValueError(f"unsupported dynamics type: {config.type!r}")
+
+
+def build_sensor(config: SensorConfig, rng: np.random.Generator):
+    if config.type == "gaussian":
+        return GaussianSensor(
+            pos_noise_std=config.pos_noise_std,
+            vel_noise_std=config.vel_noise_std,
+            rng=rng,
+        )
+    raise ValueError(f"unsupported sensor type: {config.type!r}")
+
+
+def build_estimator(config: EstimatorConfig, dt: float):
+    if config.type == "kalman_filter":
+        return KalmanFilter(
+            dt=dt,
+            process_var=config.process_var,
+            meas_var=config.meas_var,
+        )
+    raise ValueError(f"unsupported estimator type: {config.type!r}")
+
+
+def build_guidance(
+    config: GuidanceConfig,
+    waypoints: list[Waypoint],
+):
+    if config.type == "waypoint_tracker":
+        return WaypointTracker(waypoints, config.waypoint_threshold)
+    raise ValueError(f"unsupported guidance type: {config.type!r}")
 
 
 def run_simulation(
@@ -39,36 +88,40 @@ def run_simulation(
     sensor_model=None,
     scenario=None,
 ) -> SimulationResult:
-    settings = load_config(config_path)
-    simulation_settings = settings["simulation"]
-    config = SimConfig(
-        dt=float(simulation_settings["dt"]),
-        num_steps=int(simulation_settings["num_steps"]),
-    )
+    config = load_config(config_path)
     if initial_state is None:
-        state = VehicleState(**settings["initial_state"])
+        state = config.initial_state
     else:
         state = initial_state
-    controller = PointMassAccController(**settings["controller"])
-    dynamics = PointMassDynamics(**settings["dynamics"])
+    controller = build_controller(config.controller)
+    dynamics = build_dynamics(config.dynamics)
     if waypoints is None:
-        waypoints = [Waypoint(**waypoint) for waypoint in settings["waypoints"]]
+        waypoints = config.waypoints
     if waypoint_threshold is None:
-        waypoint_threshold = settings["waypoint_threshold"]
-    waypoint_tracker = WaypointTracker(waypoints, waypoint_threshold)
+        waypoint_threshold = config.guidance.waypoint_threshold
+    guidance_config = GuidanceConfig(
+        type=config.guidance.type,
+        waypoint_threshold=waypoint_threshold,
+    )
+    waypoint_tracker = build_guidance(guidance_config, waypoints)
     if sensor_model is None:
-        rng = np.random.default_rng(simulation_settings.get("random_seed"))
-        sensor = GaussianSensor(**settings["sensor"], rng=rng)
+        rng = np.random.default_rng(config.simulation.random_seed)
+        sensor = build_sensor(config.sensor, rng)
     else:
         sensor = sensor_model
     scenario_metadata = {
         "config_path": str(Path(config_path)),
-        "simulation_seed": simulation_settings.get("random_seed"),
+        "simulation_seed": config.simulation.random_seed,
+        "controller_type": config.controller.type,
+        "dynamics_type": config.dynamics.type,
+        "sensor_type": config.sensor.type,
+        "estimator_type": config.estimator.type,
+        "guidance_type": config.guidance.type,
         "sensor_model": type(sensor).__name__,
     }
     if scenario is not None:
         scenario_metadata.update(scenario)
-    kalman_filter = KalmanFilter(dt=config.dt, **settings["estimator"])
+    kalman_filter = build_estimator(config.estimator, config.simulation.dt)
 
     sensor_data = sensor.sense(state)
     if sensor_data is None:
@@ -118,16 +171,16 @@ def run_simulation(
         )
 
     record(0.0, 0.0, 0.0)
-    for step in range(config.num_steps):
+    for step in range(config.simulation.num_steps):
         if waypoint_tracker.complete:
             break
         requested_control = controller.compute_control(
             estimated_state, waypoint_tracker.current_waypoint()
         )
-        state, applied_control = dynamics.step_with_applied_control(
+        state, applied_control = dynamics.step(
             state,
             requested_control,
-            config.dt,
+            config.simulation.dt,
         )
         sensor_data = sensor.sense(state)
         estimated_state = kalman_filter.step(
@@ -136,7 +189,7 @@ def run_simulation(
         )
         waypoint_tracker.update(estimated_state)
         record(
-            (step + 1) * config.dt,
+            (step + 1) * config.simulation.dt,
             requested_control.ax,
             requested_control.ay,
         )

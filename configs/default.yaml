@@ -4,11 +4,11 @@ simulation:
   random_seed: 7
 
 initial_state: {x: 0.0, y: 0.0, vx: -1.0, vy: 2.0}
-controller: {kp: 0.5, kd: 1.0}
-dynamics: {max_speed: 5.0, max_accel: 3.0}
-sensor: {pos_noise_std: 0.1, vel_noise_std: 0.1}
-estimator: {process_var: 0.001, meas_var: 0.01}
-waypoint_threshold: 0.5
+controller: {type: point_mass_acceleration, kp: 0.5, kd: 1.0}
+dynamics: {type: point_mass, max_speed: 5.0, max_accel: 3.0}
+sensor: {type: gaussian, pos_noise_std: 0.1, vel_noise_std: 0.1}
+estimator: {type: kalman_filter, process_var: 0.001, meas_var: 0.01}
+guidance: {type: waypoint_tracker, waypoint_threshold: 0.5}
 waypoints:
   - {x: 5.0, y: 0.0}
   - {x: 5.0, y: 5.0}

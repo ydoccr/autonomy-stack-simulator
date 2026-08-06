@@ -4,6 +4,36 @@ from autonomy_sim.core.types import VehicleState
 from autonomy_sim.environments.example_environments import ZONE_NAMES
 
 
+RUN_METRIC_FIELDS = (
+    "planning_success",
+    "onboard_completion",
+    "true_goal_reached",
+    "true_mission_success",
+    "restricted_violation",
+    "disallowed_violation",
+    "out_of_bounds_violation",
+    "termination_state",
+    "final_state",
+    "final_true_distance",
+    "final_waypoint_index",
+    "completion_time",
+    "number_of_steps",
+    "actual_path_length",
+    "planned_path_length",
+    "true_zone_time_seconds",
+    "estimated_zone_time_seconds",
+    "measurement_dropout_fraction",
+    "mean_measurement_error",
+    "rmse_measurement_error",
+    "mean_estimation_error",
+    "max_estimation_error",
+    "rmse_estimation_error",
+    "control_effort",
+    "max_commanded_acceleration",
+    "max_speed",
+)
+
+
 class RunMetrics:
     def __init__(
         self,
@@ -49,7 +79,7 @@ class RunMetrics:
             axis=1,
         )
         measurement_available = np.array(
-            [sample.get("measurement_available", True) for sample in self.trajectory],
+            [sample["measurement_available"] for sample in self.trajectory],
             dtype=bool,
         )
         measurement_available = measurement_available & np.all(
@@ -180,3 +210,34 @@ class RunMetrics:
         if len(errors) == 0:
             return np.nan
         return float(np.sqrt(np.mean(np.square(errors))))
+
+
+def planning_failure_metrics():
+    return {
+        "planning_success": False,
+        "onboard_completion": False,
+        "true_goal_reached": False,
+        "true_mission_success": False,
+        "restricted_violation": None,
+        "disallowed_violation": None,
+        "out_of_bounds_violation": None,
+        "termination_state": "planning_failure",
+        "final_state": None,
+        "final_true_distance": np.nan,
+        "final_waypoint_index": None,
+        "completion_time": np.nan,
+        "number_of_steps": 0,
+        "actual_path_length": np.nan,
+        "planned_path_length": np.nan,
+        "true_zone_time_seconds": None,
+        "estimated_zone_time_seconds": None,
+        "measurement_dropout_fraction": np.nan,
+        "mean_measurement_error": np.nan,
+        "rmse_measurement_error": np.nan,
+        "mean_estimation_error": np.nan,
+        "max_estimation_error": np.nan,
+        "rmse_estimation_error": np.nan,
+        "control_effort": np.nan,
+        "max_commanded_acceleration": np.nan,
+        "max_speed": np.nan,
+    }

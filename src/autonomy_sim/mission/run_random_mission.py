@@ -7,6 +7,7 @@ from autonomy_sim.environments.example_environments import (
     create_random_environment,
 )
 from autonomy_sim.main import run_simulation
+from autonomy_sim.metrics.metrics_run import planning_failure_metrics
 from autonomy_sim.planning.astar import astar
 from autonomy_sim.planning.path_utils import grid_path_to_waypoints
 
@@ -86,7 +87,7 @@ def run_random_mission(
         )
         result = SimulationResult(
             trajectory=[],
-            metrics=_planning_failure_metrics(),
+            metrics=planning_failure_metrics(),
             scenario=scenario_metadata,
         )
         return result, environment, costmap, grid_path, waypoints
@@ -103,24 +104,6 @@ def run_random_mission(
     )
 
     return result, environment, costmap, grid_path, waypoints
-
-
-def _planning_failure_metrics():
-    return {
-        "planning_success": False,
-        "onboard_completion": False,
-        "true_goal_reached": False,
-        "true_mission_success": False,
-        "restricted_violation": None,
-        "disallowed_violation": None,
-        "out_of_bounds_violation": None,
-        "termination_state": "planning_failure",
-        "completion_time": np.nan,
-        "rmse_estimation_error": np.nan,
-        "control_effort": np.nan,
-        "true_zone_time_seconds": None,
-        "estimated_zone_time_seconds": None,
-    }
 
 
 def main():

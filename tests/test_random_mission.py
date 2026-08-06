@@ -1,3 +1,4 @@
+from autonomy_sim.metrics.metrics_run import RUN_METRIC_FIELDS
 from autonomy_sim.mission.run_random_mission import run_random_mission
 
 
@@ -26,3 +27,5 @@ def test_random_mission_returns_planning_failure_result_when_unreachable():
     assert costmap.shape == (100, 100)
     assert grid_path == []
     assert waypoints == []
+
+    assert tuple(result.metrics) == RUN_METRIC_FIELDS

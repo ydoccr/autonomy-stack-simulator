@@ -13,15 +13,6 @@ class PointMassDynamics:
         state: VehicleState,
         control: ControlInput,
         dt: float,
-    ) -> VehicleState:
-        next_state, _ = self.step_with_applied_control(state, control, dt)
-        return next_state
-
-    def step_with_applied_control(
-        self,
-        state: VehicleState,
-        control: ControlInput,
-        dt: float,
     ) -> tuple[VehicleState, ControlInput]:
         ax = control.ax
         ay = control.ay
