@@ -1,10 +1,13 @@
 import math
 
+from autonomy_sim.mission.config import load_hallway_mission_config
 from autonomy_sim.mission.run_hallway_mission import plan_hallway_mission
+from autonomy_sim.mission.run_hallway_mission import DEFAULT_MISSION_CONFIG
 
 
 def test_hallway_mission_path_stays_in_free_cells():
-    environment, costmap, grid_path, waypoints = plan_hallway_mission()
+    mission_config = load_hallway_mission_config(DEFAULT_MISSION_CONFIG)
+    environment, costmap, grid_path, waypoints = plan_hallway_mission(mission_config)
 
     assert grid_path[0] == (0, 0)
     assert grid_path[-1] == (100, 100)

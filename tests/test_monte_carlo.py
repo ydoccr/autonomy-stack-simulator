@@ -9,6 +9,9 @@ from autonomy_sim.experiments.run_monte_carlo import (
     run_monte_carlo,
     summarize_trials,
 )
+from autonomy_sim.main import DEFAULT_CONFIG, load_config
+from autonomy_sim.mission.config import load_random_mission_config
+from autonomy_sim.mission.run_random_mission import DEFAULT_MISSION_CONFIG
 
 
 ZONE_PROBABILITIES = {
@@ -17,15 +20,21 @@ ZONE_PROBABILITIES = {
     "disallowed": 0.10,
     "restricted": 0.05,
 }
+SIMULATION_CONFIG = load_config(DEFAULT_CONFIG)
+MISSION_CONFIG = load_random_mission_config(DEFAULT_MISSION_CONFIG)
 
 
 def fake_mission_runner(
+    simulation_config,
+    mission_config,
     scenario_number,
     environment_seed,
     sensor_seed,
     show_plots,
     show_metrics,
 ):
+    assert simulation_config is SIMULATION_CONFIG
+    assert mission_config is MISSION_CONFIG
     assert show_plots is False
     assert show_metrics is False
     planning_success = environment_seed % 2 == 0
@@ -79,6 +88,8 @@ def fake_mission_runner(
 
 def test_monte_carlo_is_reproducible_and_writes_one_row_per_trial(tmp_path):
     first_rows, first_summary = run_monte_carlo(
+        SIMULATION_CONFIG,
+        MISSION_CONFIG,
         trials=5,
         base_seed=12,
         sensor_scenario=3,
@@ -86,6 +97,8 @@ def test_monte_carlo_is_reproducible_and_writes_one_row_per_trial(tmp_path):
         mission_runner=fake_mission_runner,
     )
     second_rows, second_summary = run_monte_carlo(
+        SIMULATION_CONFIG,
+        MISSION_CONFIG,
         trials=5,
         base_seed=12,
         sensor_scenario=3,
@@ -110,12 +123,16 @@ def test_monte_carlo_is_reproducible_and_writes_one_row_per_trial(tmp_path):
 
 def test_monte_carlo_changes_seeds_when_base_seed_changes(tmp_path):
     first_rows, _ = run_monte_carlo(
+        SIMULATION_CONFIG,
+        MISSION_CONFIG,
         trials=2,
         base_seed=1,
         output_dir=tmp_path / "first",
         mission_runner=fake_mission_runner,
     )
     second_rows, _ = run_monte_carlo(
+        SIMULATION_CONFIG,
+        MISSION_CONFIG,
         trials=2,
         base_seed=2,
         output_dir=tmp_path / "second",
@@ -128,7 +145,15 @@ def test_monte_carlo_changes_seeds_when_base_seed_changes(tmp_path):
 
 
 def test_flatten_trial_result_expands_zone_times():
-    result, *_ = fake_mission_runner(4, 2, 3, False, False)
+    result, *_ = fake_mission_runner(
+        SIMULATION_CONFIG,
+        MISSION_CONFIG,
+        4,
+        2,
+        3,
+        False,
+        False,
+    )
 
     row = flatten_trial_result(0, 2, 3, 4, result)
 
@@ -140,8 +165,24 @@ def test_flatten_trial_result_expands_zone_times():
 
 
 def test_summary_counts_failures_and_excludes_them_from_statistics():
-    success, *_ = fake_mission_runner(3, 2, 4, False, False)
-    failure, *_ = fake_mission_runner(3, 3, 5, False, False)
+    success, *_ = fake_mission_runner(
+        SIMULATION_CONFIG,
+        MISSION_CONFIG,
+        3,
+        2,
+        4,
+        False,
+        False,
+    )
+    failure, *_ = fake_mission_runner(
+        SIMULATION_CONFIG,
+        MISSION_CONFIG,
+        3,
+        3,
+        5,
+        False,
+        False,
+    )
     rows = [
         flatten_trial_result(0, 2, 4, 3, success),
         flatten_trial_result(1, 3, 5, 3, failure),

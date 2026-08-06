@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml
 
-from autonomy_sim.main import run_simulation
+from autonomy_sim.main import load_config, run_simulation
 
 
 def test_headless_simulation_reaches_waypoint(tmp_path: Path):
@@ -27,8 +27,9 @@ def test_headless_simulation_reaches_waypoint(tmp_path: Path):
     config_path = tmp_path / "simulation.yaml"
     config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
 
+    simulation_config = load_config(config_path)
     result = run_simulation(
-        config_path,
+        simulation_config,
         show_metrics=False,
         scenario={"mission": "test"},
     )

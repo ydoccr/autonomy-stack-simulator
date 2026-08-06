@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from autonomy_sim.main import run_simulation
+from autonomy_sim.main import load_config, run_simulation
 from autonomy_sim.sensors.spotty_sensor import SpottySensor
 
 
@@ -33,8 +33,9 @@ def test_simulation_predicts_when_sensor_measurement_is_dropped(tmp_path: Path):
         rng=np.random.default_rng(2),
     )
 
+    simulation_config = load_config(config_path)
     result = run_simulation(
-        config_path,
+        simulation_config,
         show_plots=False,
         show_metrics=False,
         sensor_model=sensor,
@@ -76,8 +77,9 @@ def test_simulation_predicts_with_applied_acceleration_after_clamping(
         rng=np.random.default_rng(2),
     )
 
+    simulation_config = load_config(config_path)
     result = run_simulation(
-        config_path,
+        simulation_config,
         show_plots=False,
         show_metrics=False,
         sensor_model=sensor,

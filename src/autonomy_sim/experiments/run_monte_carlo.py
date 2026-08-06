@@ -6,6 +6,10 @@ from pathlib import Path
 
 import numpy as np
 
+from autonomy_sim.core.types import SimConfig
+from autonomy_sim.main import DEFAULT_CONFIG, load_config
+from autonomy_sim.mission.config import RandomMissionConfig, load_random_mission_config
+from autonomy_sim.mission.run_random_mission import DEFAULT_MISSION_CONFIG
 from autonomy_sim.mission.run_random_sensor_scenarios import (
     run_random_sensor_scenario,
 )
@@ -47,6 +51,9 @@ TRIAL_FIELDS = (
 
 
 def run_monte_carlo(
+    simulation_config: SimConfig,
+    mission_config: RandomMissionConfig,
+    *,
     trials=100,
     base_seed=7,
     sensor_scenario=3,
@@ -62,6 +69,8 @@ def run_monte_carlo(
     rows = []
     for trial, (environment_seed, sensor_seed) in enumerate(seed_pairs):
         result, *_ = mission_runner(
+            simulation_config=simulation_config,
+            mission_config=mission_config,
             scenario_number=sensor_scenario,
             environment_seed=environment_seed,
             sensor_seed=sensor_seed,
@@ -305,8 +314,12 @@ def main():
         type=Path,
         default=Path("results/monte_carlo"),
     )
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--mission-config", type=Path, default=DEFAULT_MISSION_CONFIG)
     args = parser.parse_args()
     _, summary = run_monte_carlo(
+        load_config(args.config),
+        load_random_mission_config(args.mission_config),
         trials=args.trials,
         base_seed=args.base_seed,
         sensor_scenario=args.sensor_scenario,

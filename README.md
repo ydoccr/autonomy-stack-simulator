@@ -46,6 +46,12 @@ The random seed, vehicle limits, sensor noise, estimator variances, controller
 gains, and waypoint route are configurable in YAML. The Python API is headless
 when both display options are disabled.
 
+Simulation configuration and mission configuration are separate. The simulation
+file defines the vehicle, sensor, estimator, guidance, timing, and direct
+waypoint route. `configs/random_mission.yaml` and `configs/hallway_mission.yaml`
+define environment, start/goal, planner, and mission-guidance settings. Mission
+commands accept `--config` and `--mission-config` when alternate files are used.
+
 The YAML also names each configured subsystem with a `type` field. The current
 supported stack is `point_mass_acceleration` control, `point_mass` dynamics,
 `gaussian` sensing, `kalman_filter` estimation, and `waypoint_tracker` guidance.
@@ -83,6 +89,12 @@ Run a scenario in a random environment the same way:
 
 ```powershell
 python -m autonomy_sim.mission.run_random_sensor_scenarios 1
+```
+
+Mission and simulation files can be selected independently:
+
+```powershell
+python -m autonomy_sim.mission.run_random_mission --config configs/default.yaml --mission-config configs/random_mission.yaml
 ```
 
 Specify seeds when repeatability across runs is needed:

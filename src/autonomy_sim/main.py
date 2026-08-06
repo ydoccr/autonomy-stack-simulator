@@ -77,7 +77,7 @@ def build_guidance(
 
 
 def run_simulation(
-    config_path=DEFAULT_CONFIG,
+    config: SimConfig,
     *,
     show_plots=False,
     show_metrics=True,
@@ -88,7 +88,6 @@ def run_simulation(
     sensor_model=None,
     scenario=None,
 ) -> SimulationResult:
-    config = load_config(config_path)
     if initial_state is None:
         state = config.initial_state
     else:
@@ -110,7 +109,6 @@ def run_simulation(
     else:
         sensor = sensor_model
     scenario_metadata = {
-        "config_path": str(Path(config_path)),
         "simulation_seed": config.simulation.random_seed,
         "controller_type": config.controller.type,
         "dynamics_type": config.dynamics.type,
@@ -218,7 +216,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run the waypoint simulation.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     args = parser.parse_args()
-    run_simulation(args.config, show_plots=True)
+    config = load_config(args.config)
+    run_simulation(config, show_plots=True)
 
 
 if __name__ == "__main__":

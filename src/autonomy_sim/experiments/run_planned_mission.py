@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
-from autonomy_sim.core.types import VehicleState
-from autonomy_sim.main import run_simulation
+from autonomy_sim.core.types import SimConfig, VehicleState
+from autonomy_sim.main import DEFAULT_CONFIG, load_config, run_simulation
 from autonomy_sim.planning.astar import astar
 from autonomy_sim.planning.costmap import (
     add_rectangular_cost,
@@ -51,7 +51,7 @@ def plot_planned_mission(
     plt.show()
 
 
-def run_planned_mission(show_plots: bool = False):
+def run_planned_mission(simulation_config: SimConfig, show_plots: bool = False):
     costmap, start, goal = create_scenario()
     grid_path = astar(
         costmap,
@@ -71,6 +71,7 @@ def run_planned_mission(show_plots: bool = False):
         vy=0.0,
     )
     result = run_simulation(
+        simulation_config,
         show_plots=False,
         show_metrics=False,
         initial_state=initial_state,
@@ -88,4 +89,4 @@ def run_planned_mission(show_plots: bool = False):
 
 
 if __name__ == "__main__":
-    run_planned_mission(show_plots=True)
+    run_planned_mission(load_config(DEFAULT_CONFIG), show_plots=True)

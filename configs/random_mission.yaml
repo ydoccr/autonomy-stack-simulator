@@ -1,0 +1,26 @@
+type: random
+
+environment:
+  width: 10
+  height: 10
+  resolution: 0.1
+  zone_probabilities:
+    free: 0.65
+    occupied: 0.20
+    disallowed: 0.10
+    restricted: 0.05
+
+initial_state: {x: 0.0, y: 0.0, vx: 0.0, vy: 0.0}
+goal: {x: 9.9, y: 9.9}
+guidance: {waypoint_threshold: 0.2}
+
+planner:
+  allow_diagonal: true
+  fuel_rate: 1.0
+  max_waypoint_distance: 0.5
+  waypoint_cost: 0.02
+  turn_cost_weight: 0.5
+  nominal_speed: 2.0
+  proximity_sigma: 0.06
+  allow_disallowed: false
+  max_cost: .inf

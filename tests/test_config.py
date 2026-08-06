@@ -41,7 +41,7 @@ def test_unknown_controller_type_is_rejected(tmp_path: Path):
         ValueError,
         match="unsupported controller type: 'unknown_controller'",
     ):
-        run_simulation(config_path, show_metrics=False)
+        run_simulation(load_config(config_path), show_metrics=False)
 
 
 @pytest.mark.parametrize(
@@ -64,7 +64,7 @@ def test_unknown_subsystem_types_are_rejected(
     config_path = write_config(tmp_path, settings)
 
     with pytest.raises(ValueError, match=message):
-        run_simulation(config_path, show_metrics=False)
+        run_simulation(load_config(config_path), show_metrics=False)
 
 
 @pytest.mark.parametrize(
