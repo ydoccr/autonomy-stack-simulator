@@ -47,7 +47,21 @@ def fake_mission_runner(
             "termination_state": "goal_reached",
             "completion_time": 4.0,
             "rmse_estimation_error": 0.25,
-            "control_effort": 2.0,
+            "mean_true_cross_track_error": 0.2,
+            "max_true_cross_track_error": 0.5,
+            "rmse_true_cross_track_error": 0.25,
+            "mean_estimated_cross_track_error": 0.1,
+            "max_estimated_cross_track_error": 0.3,
+            "rmse_estimated_cross_track_error": 0.15,
+            "minimum_true_clearance": 0.4,
+            "minimum_estimated_clearance": 0.6,
+            "commanded_control_effort": 2.0,
+            "applied_control_effort": 1.8,
+            "control_saturation_fraction": 0.1,
+            "mean_control_saturation_error": 0.05,
+            "max_control_saturation_error": 0.2,
+            "max_commanded_acceleration": 2.0,
+            "max_applied_acceleration": 1.5,
             "measurement_dropout_fraction": 0.1,
             "true_zone_time_seconds": _zone_times(free=3.0, occupied=1.0),
             "estimated_zone_time_seconds": _zone_times(free=4.0),
@@ -64,7 +78,21 @@ def fake_mission_runner(
             "termination_state": "planning_failure",
             "completion_time": np.nan,
             "rmse_estimation_error": np.nan,
-            "control_effort": np.nan,
+            "mean_true_cross_track_error": np.nan,
+            "max_true_cross_track_error": np.nan,
+            "rmse_true_cross_track_error": np.nan,
+            "mean_estimated_cross_track_error": np.nan,
+            "max_estimated_cross_track_error": np.nan,
+            "rmse_estimated_cross_track_error": np.nan,
+            "minimum_true_clearance": np.nan,
+            "minimum_estimated_clearance": np.nan,
+            "commanded_control_effort": np.nan,
+            "applied_control_effort": np.nan,
+            "control_saturation_fraction": np.nan,
+            "mean_control_saturation_error": np.nan,
+            "max_control_saturation_error": np.nan,
+            "max_commanded_acceleration": np.nan,
+            "max_applied_acceleration": np.nan,
             "measurement_dropout_fraction": np.nan,
             "true_zone_time_seconds": None,
             "estimated_zone_time_seconds": None,
@@ -162,6 +190,8 @@ def test_flatten_trial_result_expands_zone_times():
     assert row["true_free_time"] == 3.0
     assert row["true_occupied_time"] == 1.0
     assert row["estimated_free_time"] == 4.0
+    assert row["minimum_true_clearance"] == 0.4
+    assert row["applied_control_effort"] == 1.8
 
 
 def test_summary_counts_failures_and_excludes_them_from_statistics():
@@ -200,6 +230,7 @@ def test_summary_counts_failures_and_excludes_them_from_statistics():
     }
     assert summary["statistics"]["completion_time"] == {
         "count": 1,
+        "min": 4.0,
         "mean": 4.0,
         "median": 4.0,
         "max": 4.0,

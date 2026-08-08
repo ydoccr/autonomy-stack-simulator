@@ -24,6 +24,13 @@ def create_trajectory():
             "vy_est": 0.0,
             "ax_cmd": 0.0,
             "ay_cmd": 0.0,
+            "ax_applied": 0.0,
+            "ay_applied": 0.0,
+            "control_saturated": False,
+            "true_cross_track_error": 0.0,
+            "estimated_cross_track_error": 0.0,
+            "true_clearance": 2.0,
+            "estimated_clearance": 2.0,
             "current_waypoint_index": 0,
             "distance_to_waypoint": 2.0,
         },
@@ -44,6 +51,13 @@ def create_trajectory():
             "vy_est": 0.0,
             "ax_cmd": 1.0,
             "ay_cmd": 0.0,
+            "ax_applied": 0.5,
+            "ay_applied": 0.0,
+            "control_saturated": True,
+            "true_cross_track_error": 0.5,
+            "estimated_cross_track_error": 0.25,
+            "true_clearance": 1.0,
+            "estimated_clearance": 1.5,
             "current_waypoint_index": 0,
             "distance_to_waypoint": 1.0,
         },
@@ -64,6 +78,13 @@ def create_trajectory():
             "vy_est": 0.0,
             "ax_cmd": 1.0,
             "ay_cmd": 0.0,
+            "ax_applied": 1.0,
+            "ay_applied": 0.0,
+            "control_saturated": False,
+            "true_cross_track_error": 1.0,
+            "estimated_cross_track_error": 0.5,
+            "true_clearance": 0.5,
+            "estimated_clearance": 1.0,
             "current_waypoint_index": 0,
             "distance_to_waypoint": 0.0,
         },
@@ -91,7 +112,17 @@ def test_run_metrics_calculates_mission_performance():
     assert metrics["final_true_distance"] == 0.0
     assert metrics["actual_path_length"] == 2.0
     assert metrics["planned_path_length"] == 2.0
-    assert metrics["control_effort"] == 2.0
+    assert metrics["commanded_control_effort"] == 2.0
+    assert metrics["applied_control_effort"] == 1.5
+    assert metrics["control_saturation_fraction"] == 0.5
+    assert metrics["mean_control_saturation_error"] == 0.25
+    assert metrics["max_control_saturation_error"] == 0.5
+    assert metrics["mean_true_cross_track_error"] == 0.5
+    assert metrics["max_true_cross_track_error"] == 1.0
+    assert metrics["rmse_true_cross_track_error"] == np.sqrt(1.25 / 3.0)
+    assert metrics["rmse_estimated_cross_track_error"] == np.sqrt(0.3125 / 3.0)
+    assert metrics["minimum_true_clearance"] == 0.5
+    assert metrics["minimum_estimated_clearance"] == 1.0
     assert metrics["measurement_dropout_fraction"] == 0.0
     assert metrics["rmse_measurement_error"] == np.sqrt(2.0 / 3.0)
     assert metrics["rmse_estimation_error"] == np.sqrt(0.25 / 3.0)

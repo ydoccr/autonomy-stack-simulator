@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import yaml
 
 from autonomy_sim.main import load_config, run_simulation
@@ -38,6 +39,8 @@ def test_headless_simulation_reaches_waypoint(tmp_path: Path):
     assert len(trajectory) < config["simulation"]["num_steps"]
     assert abs(trajectory[-1]["x"] - 1.0) < 0.3
     assert trajectory[-1]["current_waypoint_index"] == 0
+    assert all(sample["true_cross_track_error"] == 0.0 for sample in trajectory)
+    assert all(np.isnan(sample["true_clearance"]) for sample in trajectory)
     assert result.metrics["true_mission_success"] is True
     assert result.scenario["mission"] == "test"
     assert result.scenario["simulation_seed"] == 1

@@ -28,8 +28,21 @@ RUN_METRIC_FIELDS = (
     "mean_estimation_error",
     "max_estimation_error",
     "rmse_estimation_error",
-    "control_effort",
+    "mean_true_cross_track_error",
+    "max_true_cross_track_error",
+    "rmse_true_cross_track_error",
+    "mean_estimated_cross_track_error",
+    "max_estimated_cross_track_error",
+    "rmse_estimated_cross_track_error",
+    "minimum_true_clearance",
+    "minimum_estimated_clearance",
+    "commanded_control_effort",
+    "applied_control_effort",
+    "control_saturation_fraction",
+    "mean_control_saturation_error",
+    "max_control_saturation_error",
     "max_commanded_acceleration",
+    "max_applied_acceleration",
     "max_speed",
 )
 
@@ -68,7 +81,28 @@ class RunMetrics:
         measured_positions = self._values("x_meas", "y_meas")
         estimated_positions = self._values("x_est", "y_est")
         true_velocities = self._values("vx", "vy")
-        controls = self._values("ax_cmd", "ay_cmd")
+        commanded_controls = self._values("ax_cmd", "ay_cmd")
+        applied_controls = self._values("ax_applied", "ay_applied")
+        control_saturated = np.array(
+            [sample["control_saturated"] for sample in self.trajectory],
+            dtype=bool,
+        )
+        true_cross_track_errors = np.array(
+            [sample["true_cross_track_error"] for sample in self.trajectory],
+            dtype=float,
+        )
+        estimated_cross_track_errors = np.array(
+            [sample["estimated_cross_track_error"] for sample in self.trajectory],
+            dtype=float,
+        )
+        true_clearances = np.array(
+            [sample["true_clearance"] for sample in self.trajectory],
+            dtype=float,
+        )
+        estimated_clearances = np.array(
+            [sample["estimated_clearance"] for sample in self.trajectory],
+            dtype=float,
+        )
         times = np.array(
             [sample["time"] for sample in self.trajectory],
             dtype=float,
@@ -92,7 +126,12 @@ class RunMetrics:
             axis=1,
         )
         speeds = np.linalg.norm(true_velocities, axis=1)
-        acceleration_magnitudes = np.linalg.norm(controls, axis=1)
+        commanded_acceleration_magnitudes = np.linalg.norm(commanded_controls, axis=1)
+        applied_acceleration_magnitudes = np.linalg.norm(applied_controls, axis=1)
+        saturation_errors = np.linalg.norm(
+            commanded_controls - applied_controls,
+            axis=1,
+        )
 
         final_distance = float(
             np.hypot(
@@ -110,10 +149,22 @@ class RunMetrics:
         true_zone_time = self._zone_time(times, true_positions)
         estimated_zone_time = self._zone_time(times, estimated_positions)
 
-        control_effort = 0.0
+        commanded_control_effort = 0.0
+        applied_control_effort = 0.0
+        control_saturation_fraction = 0.0
+        mean_control_saturation_error = 0.0
+        max_control_saturation_error = 0.0
         if len(times) > 1:
             time_steps = np.diff(times)
-            control_effort = float(np.sum(acceleration_magnitudes[1:] * time_steps))
+            commanded_control_effort = float(
+                np.sum(commanded_acceleration_magnitudes[1:] * time_steps)
+            )
+            applied_control_effort = float(
+                np.sum(applied_acceleration_magnitudes[1:] * time_steps)
+            )
+            control_saturation_fraction = float(np.mean(control_saturated[1:]))
+            mean_control_saturation_error = float(np.mean(saturation_errors[1:]))
+            max_control_saturation_error = float(np.max(saturation_errors[1:]))
 
         onboard_completion = self.path_complete
         true_goal_reached = final_distance < self.goal_tolerance
@@ -165,8 +216,29 @@ class RunMetrics:
             "mean_estimation_error": float(np.mean(estimation_errors)),
             "max_estimation_error": float(np.max(estimation_errors)),
             "rmse_estimation_error": self._rmse(estimation_errors),
-            "control_effort": control_effort,
-            "max_commanded_acceleration": float(np.max(acceleration_magnitudes)),
+            "mean_true_cross_track_error": float(np.mean(true_cross_track_errors)),
+            "max_true_cross_track_error": float(np.max(true_cross_track_errors)),
+            "rmse_true_cross_track_error": self._rmse(true_cross_track_errors),
+            "mean_estimated_cross_track_error": float(
+                np.mean(estimated_cross_track_errors)
+            ),
+            "max_estimated_cross_track_error": float(
+                np.max(estimated_cross_track_errors)
+            ),
+            "rmse_estimated_cross_track_error": self._rmse(
+                estimated_cross_track_errors
+            ),
+            "minimum_true_clearance": self._minimum_finite(true_clearances),
+            "minimum_estimated_clearance": self._minimum_finite(estimated_clearances),
+            "commanded_control_effort": commanded_control_effort,
+            "applied_control_effort": applied_control_effort,
+            "control_saturation_fraction": control_saturation_fraction,
+            "mean_control_saturation_error": mean_control_saturation_error,
+            "max_control_saturation_error": max_control_saturation_error,
+            "max_commanded_acceleration": float(
+                np.max(commanded_acceleration_magnitudes)
+            ),
+            "max_applied_acceleration": float(np.max(applied_acceleration_magnitudes)),
             "max_speed": float(np.max(speeds)),
         }
 
@@ -211,6 +283,13 @@ class RunMetrics:
             return np.nan
         return float(np.sqrt(np.mean(np.square(errors))))
 
+    @staticmethod
+    def _minimum_finite(values):
+        finite_values = values[np.isfinite(values)]
+        if len(finite_values) == 0:
+            return np.nan
+        return float(np.min(finite_values))
+
 
 def planning_failure_metrics():
     return {
@@ -237,7 +316,20 @@ def planning_failure_metrics():
         "mean_estimation_error": np.nan,
         "max_estimation_error": np.nan,
         "rmse_estimation_error": np.nan,
-        "control_effort": np.nan,
+        "mean_true_cross_track_error": np.nan,
+        "max_true_cross_track_error": np.nan,
+        "rmse_true_cross_track_error": np.nan,
+        "mean_estimated_cross_track_error": np.nan,
+        "max_estimated_cross_track_error": np.nan,
+        "rmse_estimated_cross_track_error": np.nan,
+        "minimum_true_clearance": np.nan,
+        "minimum_estimated_clearance": np.nan,
+        "commanded_control_effort": np.nan,
+        "applied_control_effort": np.nan,
+        "control_saturation_fraction": np.nan,
+        "mean_control_saturation_error": np.nan,
+        "max_control_saturation_error": np.nan,
         "max_commanded_acceleration": np.nan,
+        "max_applied_acceleration": np.nan,
         "max_speed": np.nan,
     }

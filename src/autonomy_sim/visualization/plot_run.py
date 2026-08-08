@@ -131,12 +131,15 @@ def plot_speed_tracking(ax, trajectory):
 
 def plot_acceleration(ax, trajectory):
     time = [sample["time"] for sample in trajectory]
-    acceleration = _magnitudes(trajectory, "ax_cmd", "ay_cmd")
+    commanded = _magnitudes(trajectory, "ax_cmd", "ay_cmd")
+    applied = _magnitudes(trajectory, "ax_applied", "ay_applied")
 
-    ax.plot(time, acceleration)
+    ax.plot(time, commanded, label="Commanded")
+    ax.plot(time, applied, "--", label="Applied")
     ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Commanded acceleration")
-    ax.set_title("Control Effort")
+    ax.set_ylabel("Acceleration")
+    ax.set_title("Commanded vs. Applied Control")
+    ax.legend(fontsize="small")
     ax.grid(True)
 
 
@@ -196,8 +199,17 @@ def plot_metrics_panel(ax, metrics):
         f"Mean estimate error: {metrics['mean_estimation_error']:.3f}",
         f"Maximum estimate error: {metrics['max_estimation_error']:.3f}",
         f"Estimate RMSE: {metrics['rmse_estimation_error']:.3f}",
-        f"Control effort: {metrics['control_effort']:.3f}",
-        f"Maximum acceleration: {metrics['max_commanded_acceleration']:.3f}",
+        f"True cross-track RMSE: {metrics['rmse_true_cross_track_error']:.3f}",
+        f"True max cross-track: {metrics['max_true_cross_track_error']:.3f}",
+        f"Estimated cross-track RMSE: "
+        f"{metrics['rmse_estimated_cross_track_error']:.3f}",
+        f"Minimum true clearance: {metrics['minimum_true_clearance']:.3f}",
+        f"Minimum estimated clearance: {metrics['minimum_estimated_clearance']:.3f}",
+        f"Commanded control effort: {metrics['commanded_control_effort']:.3f}",
+        f"Applied control effort: {metrics['applied_control_effort']:.3f}",
+        f"Control saturation fraction: {metrics['control_saturation_fraction']:.3f}",
+        f"Maximum commanded acceleration: {metrics['max_commanded_acceleration']:.3f}",
+        f"Maximum applied acceleration: {metrics['max_applied_acceleration']:.3f}",
         f"Maximum speed: {metrics['max_speed']:.3f}",
     ]
     ax.set_title("Mission Metrics", loc="left")

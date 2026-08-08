@@ -87,6 +87,11 @@ def test_simulation_predicts_with_applied_acceleration_after_clamping(
     final_sample = result.trajectory[-1]
 
     assert final_sample["ax_cmd"] == 10.0
+    assert final_sample["ax_applied"] == 0.5
+    assert final_sample["control_saturated"] is True
     assert np.isclose(final_sample["vx"], 0.05)
     assert np.isclose(final_sample["vx_est"], final_sample["vx"])
     assert np.isclose(final_sample["x_est"], final_sample["x"])
+    assert np.isclose(result.metrics["commanded_control_effort"], 1.0)
+    assert np.isclose(result.metrics["applied_control_effort"], 0.05)
+    assert result.metrics["control_saturation_fraction"] == 1.0

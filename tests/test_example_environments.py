@@ -198,3 +198,22 @@ def test_environment_stores_max_cost():
     environment = create_random_environment(max_cost=1234.0)
 
     assert environment.max_cost == 1234.0
+
+
+def test_clearance_measures_prohibited_zones_and_environment_boundary():
+    environment = GridEnvironment(width=4, height=4, resolution=1.0)
+    environment.set_zone("disallowed", 1, 2, 2, 3)
+
+    assert environment.clearance_at_position(1.0, 1.5) == 1.0
+    assert environment.clearance_at_position(2.5, 1.5) == 0.0
+    assert environment.clearance_at_position(0.25, 3.0) == 0.25
+    assert environment.clearance_at_position(-0.1, 1.0) == 0.0
+
+
+def test_clearance_cache_updates_when_zones_change():
+    environment = GridEnvironment(width=4, height=4, resolution=1.0)
+    assert environment.clearance_at_position(2.5, 2.5) == 1.5
+
+    environment.set_zone("restricted", 2, 3, 3, 4)
+
+    assert environment.clearance_at_position(2.5, 2.5) == 0.5

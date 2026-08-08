@@ -33,7 +33,7 @@ def test_plot_all_uses_one_dashboard_window(monkeypatch):
     assert "Environment and Path Tracking" in titles
     assert "Sensor vs. Kalman Estimate" in titles
     assert "Velocity Tracking" in titles
-    assert "Control Effort" in titles
+    assert "Commanded vs. Applied Control" in titles
     assert "Distance to Current Waypoint" in titles
     assert "Guidance Progress" in titles
     assert "Mission Metrics" in left_titles

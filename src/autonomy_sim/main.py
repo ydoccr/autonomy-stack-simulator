@@ -7,6 +7,7 @@ import yaml
 from autonomy_sim.control.point_mass_acc_controller import PointMassAccController
 from autonomy_sim.core.types import (
     ControllerConfig,
+    ControlInput,
     DynamicsConfig,
     EstimatorConfig,
     GuidanceConfig,
@@ -20,6 +21,7 @@ from autonomy_sim.dynamics.point_mass import PointMassDynamics
 from autonomy_sim.estimation.kalman_filter import KalmanFilter
 from autonomy_sim.guidance.waypoint_tracker import WaypointTracker
 from autonomy_sim.metrics.metrics_run import RunMetrics
+from autonomy_sim.metrics.geometry import distances_to_polyline, planned_path_positions
 from autonomy_sim.sensors.gaussian_sensor import GaussianSensor
 from autonomy_sim.visualization.plot_run import plot_all, plot_metrics
 
@@ -129,8 +131,9 @@ def run_simulation(
     estimated_state = kalman_filter.current_state()
     waypoint_tracker.update(estimated_state)
     trajectory = []
+    reference_path = planned_path_positions(state.position().tolist(), waypoints)
 
-    def record(time, ax, ay):
+    def record(time, commanded_control, applied_control):
         measurement_available = sensor_data is not None
         if measurement_available:
             x_meas = sensor_data.x_meas
@@ -142,6 +145,35 @@ def run_simulation(
             y_meas = np.nan
             vx_meas = np.nan
             vy_meas = np.nan
+
+        true_position = state.position()
+        estimated_position = estimated_state.position()
+        true_cross_track_error = distances_to_polyline(
+            true_position[None, :], reference_path
+        )[0]
+        estimated_cross_track_error = distances_to_polyline(
+            estimated_position[None, :], reference_path
+        )[0]
+        control_saturated = not np.allclose(
+            commanded_control.as_array(),
+            applied_control.as_array(),
+            rtol=0.0,
+            atol=1e-12,
+        )
+        if environment is None:
+            true_zone = None
+            estimated_zone = None
+            true_clearance = np.nan
+            estimated_clearance = np.nan
+        else:
+            true_zone = environment.zone_at_position(state.x, state.y)
+            estimated_zone = environment.zone_at_position(
+                estimated_state.x, estimated_state.y
+            )
+            true_clearance = environment.clearance_at_position(state.x, state.y)
+            estimated_clearance = environment.clearance_at_position(
+                estimated_state.x, estimated_state.y
+            )
 
         trajectory.append(
             {
@@ -159,8 +191,17 @@ def run_simulation(
                 "y_est": estimated_state.y,
                 "vx_est": estimated_state.vx,
                 "vy_est": estimated_state.vy,
-                "ax_cmd": ax,
-                "ay_cmd": ay,
+                "ax_cmd": commanded_control.ax,
+                "ay_cmd": commanded_control.ay,
+                "ax_applied": applied_control.ax,
+                "ay_applied": applied_control.ay,
+                "control_saturated": control_saturated,
+                "true_cross_track_error": float(true_cross_track_error),
+                "estimated_cross_track_error": float(estimated_cross_track_error),
+                "true_clearance": true_clearance,
+                "estimated_clearance": estimated_clearance,
+                "true_zone": true_zone,
+                "estimated_zone": estimated_zone,
                 "current_waypoint_index": waypoint_tracker.current_index,
                 "distance_to_waypoint": waypoint_tracker.distance_to_current_waypoint(
                     estimated_state
@@ -168,7 +209,8 @@ def run_simulation(
             }
         )
 
-    record(0.0, 0.0, 0.0)
+    zero_control = ControlInput(ax=0.0, ay=0.0)
+    record(0.0, zero_control, zero_control)
     for step in range(config.simulation.num_steps):
         if waypoint_tracker.complete:
             break
@@ -188,8 +230,8 @@ def run_simulation(
         waypoint_tracker.update(estimated_state)
         record(
             (step + 1) * config.simulation.dt,
-            requested_control.ax,
-            requested_control.ay,
+            requested_control,
+            applied_control,
         )
 
     run_metrics = RunMetrics(

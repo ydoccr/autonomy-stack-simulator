@@ -29,6 +29,7 @@ class GridEnvironment:
         self.occupied = np.zeros((height, width), dtype=bool)
         self.disallowed = np.zeros((height, width), dtype=bool)
         self.restricted = np.zeros((height, width), dtype=bool)
+        self._prohibited_cell_bounds = None
 
     def set_zone(self, zone, row_min, row_max, col_min, col_max):
         rows = slice(row_min, row_max)
@@ -37,6 +38,7 @@ class GridEnvironment:
         self.occupied[rows, columns] = False
         self.disallowed[rows, columns] = False
         self.restricted[rows, columns] = False
+        self._prohibited_cell_bounds = None
 
         if zone == "occupied":
             self.occupied[rows, columns] = True
@@ -46,6 +48,46 @@ class GridEnvironment:
             self.restricted[rows, columns] = True
         elif zone != "free":
             raise ValueError("unknown zone type")
+
+    def clearance_at_position(self, x, y):
+        """Distance to disallowed, restricted, or out-of-bounds space."""
+        x = float(x)
+        y = float(y)
+        world_width = self.width * self.resolution
+        world_height = self.height * self.resolution
+        if not (0.0 <= x < world_width and 0.0 <= y < world_height):
+            return 0.0
+        if self.zone_at_position(x, y) in ("disallowed", "restricted"):
+            return 0.0
+
+        boundary_clearance = min(x, y, world_width - x, world_height - y)
+        prohibited_bounds = self._get_prohibited_cell_bounds()
+        if len(prohibited_bounds) == 0:
+            return float(boundary_clearance)
+
+        left = prohibited_bounds[:, 0]
+        right = prohibited_bounds[:, 1]
+        bottom = prohibited_bounds[:, 2]
+        top = prohibited_bounds[:, 3]
+        dx = np.maximum(np.maximum(left - x, 0.0), x - right)
+        dy = np.maximum(np.maximum(bottom - y, 0.0), y - top)
+        zone_clearance = np.min(np.hypot(dx, dy))
+        return float(min(boundary_clearance, zone_clearance))
+
+    def _get_prohibited_cell_bounds(self):
+        if self._prohibited_cell_bounds is None:
+            prohibited = self.disallowed | self.restricted
+            rows, columns = np.nonzero(prohibited)
+            resolution = self.resolution
+            self._prohibited_cell_bounds = np.column_stack(
+                (
+                    columns * resolution,
+                    (columns + 1) * resolution,
+                    rows * resolution,
+                    (rows + 1) * resolution,
+                )
+            )
+        return self._prohibited_cell_bounds
 
     def zone_at_position(self, x, y):
         column = int(np.floor(float(x) / self.resolution))

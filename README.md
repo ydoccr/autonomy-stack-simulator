@@ -14,7 +14,7 @@ WaypointTracker -> Controller -> Dynamics -> True state
        |                             |          v
        +----- Estimated state <- Kalman <- Sensor model
 
-Trajectory -> Metrics and visualization
+Trajectory (including commanded/applied control) -> Metrics and visualization
 ```
 
 True state is confined to dynamics, sensor generation, logging, and metrics.
@@ -122,10 +122,34 @@ The runner writes one row per attempted trial to
 stop later trials. Use the same base seed to reproduce the same environment and
 sensor seeds.
 
-Current simplification: dynamics clamps acceleration and speed internally while
-the Kalman filter predicts from the controller command. This small model
-mismatch is intentionally visible and partly represented by process noise. A
-future actuator interface can expose applied control explicitly.
+## Qualification metrics
+
+Each trajectory sample records true, measured, and estimated state; commanded
+and applied acceleration; whether dynamics limits changed the command; true and
+estimated cross-track error; true and estimated safety clearance; and true and
+estimated zone classification.
+
+Run-level metrics include:
+
+- mean, maximum, and root-mean-square true and estimated cross-track error;
+- minimum true and estimated clearance to disallowed/restricted space or the
+  environment boundary;
+- commanded and applied control effort, computed as the time integral of
+  acceleration magnitude;
+- saturation fraction plus mean and maximum command-to-applied acceleration
+  mismatch; and
+- maximum commanded and applied acceleration.
+
+Cross-track error is shortest distance to the planned waypoint polyline.
+Clearance excludes occupied cells because the model defines them as hazardous
+but traversable; disallowed and restricted cells are prohibited. All geometric
+metrics use the environment's world units. Monte Carlo trial CSVs include these
+metrics, and summaries aggregate the principal cross-track, clearance, and
+control quantities.
+
+Dynamics applies acceleration and speed limits before returning the applied
+control. The Kalman filter predicts from that applied value, keeping estimator
+propagation consistent with the simulated vehicle response.
 
 ## Verify
 
