@@ -204,7 +204,11 @@ cython_debug/
 tempCodeRunnerFile.py
 
 # Generated experiment output
-results/
+results/*
+!results/qualification/
+results/qualification/*
+!results/qualification/pilot_nominal_v1/
+!results/qualification/nominal_baseline_v1/
 
 # AI coding-agent metadata and instructions
 .agents/

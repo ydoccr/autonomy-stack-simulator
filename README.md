@@ -185,6 +185,15 @@ estimated state; the second judges physical goal attainment with allowance for
 nominal estimation error. The planner also inflates prohibited zones by the
 configured minimum clearance.
 
+### Frozen nominal baseline result
+
+`nominal_baseline_v1` passed all six predeclared gates across 500 trials. It
+achieved 92.0% planning success, 99.78% mission success given a valid plan,
+0.22% false completion given a valid plan, no safety violations, 0.0374 mean
+true cross-track RMSE, and no control saturation. The archived evidence is in
+`results/qualification/nominal_baseline_v1/`; the separate 50-trial diagnostic
+pilot is in `results/qualification/pilot_nominal_v1/`.
+
 ## Verify
 
 ```powershell

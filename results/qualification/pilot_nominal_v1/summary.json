@@ -1,0 +1,103 @@
+{
+  "confidence_intervals_95": {
+    "false_completion_given_plan": {
+      "lower": 6.938893903907228e-18,
+      "upper": 0.07410012966611748
+    },
+    "planning_success": {
+      "lower": 0.8653990931249297,
+      "upper": 0.9889611156723802
+    },
+    "safety_violation_given_plan": {
+      "lower": 6.938893903907228e-18,
+      "upper": 0.07410012966611748
+    },
+    "true_mission_success_given_plan": {
+      "lower": 0.9258998703338824,
+      "upper": 0.9999999999999999
+    }
+  },
+  "configuration": {
+    "base_seed": 20260808,
+    "sensor_scenario": 0,
+    "trials": 50
+  },
+  "counts": {
+    "false_completion": 0,
+    "onboard_completion": 48,
+    "planning_success": 48,
+    "safety_violation": 0,
+    "true_mission_success": 48
+  },
+  "rates": {
+    "false_completion_given_plan": 0.0,
+    "onboard_completion": 0.96,
+    "planning_success": 0.96,
+    "safety_violation": 0.0,
+    "safety_violation_given_plan": 0.0,
+    "true_mission_success": 0.96,
+    "true_mission_success_given_plan": 1.0
+  },
+  "statistics": {
+    "applied_control_effort": {
+      "count": 48,
+      "max": 6.9658054269059315,
+      "mean": 5.544941536956029,
+      "median": 5.526748583456766,
+      "min": 4.699229331508082
+    },
+    "commanded_control_effort": {
+      "count": 48,
+      "max": 6.9658054269059315,
+      "mean": 5.544941536956029,
+      "median": 5.526748583456766,
+      "min": 4.699229331508084
+    },
+    "completion_time": {
+      "count": 48,
+      "max": 86.4,
+      "mean": 70.87291666666668,
+      "median": 70.60000000000001,
+      "min": 61.6
+    },
+    "control_saturation_fraction": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "median": 0.0,
+      "min": 0.0
+    },
+    "minimum_true_clearance": {
+      "count": 48,
+      "max": 0.4169545291881125,
+      "mean": 0.1382259588158107,
+      "median": 0.12011550295377973,
+      "min": 0.06576556680485555
+    },
+    "rmse_estimation_error": {
+      "count": 48,
+      "max": 0.06326673810902969,
+      "mean": 0.0584268082145131,
+      "median": 0.05813411833349436,
+      "min": 0.05435151974070521
+    },
+    "rmse_true_cross_track_error": {
+      "count": 48,
+      "max": 0.050228853163423126,
+      "mean": 0.03624544802822264,
+      "median": 0.03610832693817309,
+      "min": 0.026233602472452437
+    },
+    "true_occupied_time": {
+      "count": 48,
+      "max": 10.799999999999995,
+      "mean": 1.7124999999999997,
+      "median": 0.3500000000000032,
+      "min": 0.0
+    }
+  },
+  "termination_counts": {
+    "goal_reached": 48,
+    "planning_failure": 2
+  }
+}
