@@ -1,8 +1,10 @@
 import argparse
 from pathlib import Path
 
+import numpy as np
+
 from autonomy_sim.core.types import SimConfig
-from autonomy_sim.main import DEFAULT_CONFIG, load_config
+from autonomy_sim.main import DEFAULT_CONFIG, build_sensor, load_config
 from autonomy_sim.mission.config import RandomMissionConfig, load_random_mission_config
 from autonomy_sim.mission.run_random_mission import (
     DEFAULT_MISSION_CONFIG,
@@ -20,7 +22,13 @@ def run_random_sensor_scenario(
     show_plots=True,
     show_metrics=True,
 ):
-    sensor = create_sensor_scenario(scenario_number, sensor_seed)
+    if scenario_number == 0:
+        sensor = build_sensor(
+            simulation_config.sensor,
+            np.random.default_rng(sensor_seed),
+        )
+    else:
+        sensor = create_sensor_scenario(scenario_number, sensor_seed)
     return run_random_mission(
         simulation_config,
         mission_config,
@@ -37,9 +45,9 @@ def run_random_sensor_scenario(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run a random mission with sensor errors."
+        description="Run a random mission with a configured sensor scenario."
     )
-    parser.add_argument("scenario", type=int, choices=[1, 2, 3, 4])
+    parser.add_argument("scenario", type=int, choices=[0, 1, 2, 3, 4])
     parser.add_argument("--environment-seed", type=int, default=0)
     parser.add_argument("--sensor-seed", type=int, default=7)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)

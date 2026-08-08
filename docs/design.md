@@ -18,6 +18,11 @@ state estimation, and analysis.
 
 The vehicle state is `[x, y, vx, vy]`, and the control input is `[ax, ay]`.
 
+Grid indices identify cell centers. Cell `(row, column)` is located at
+`(column * resolution, row * resolution)`, and the physical environment extends
+half a cell beyond its outermost centers. Planning, zone lookup, visualization,
+and clearance calculations use this same convention.
+
 ## Zone policy
 
 - Free cells have no environmental cost.
@@ -47,6 +52,19 @@ acceleration magnitudes. Saturation metrics compare the controller request to
 the acceleration actually applied by dynamics after acceleration and speed
 limits. The initial zero-control sample is excluded from saturation frequency
 and mismatch statistics.
+
+## Baseline qualification
+
+Campaign execution snapshots all YAML inputs and records their hashes, the Git
+commit and cleanliness, Python and dependency versions, seed schedule, command,
+and timing. Trial rows remain in deterministic seed order even when executed in
+parallel. Replay uses archived inputs and recorded environment/sensor seeds,
+then compares every regenerated CSV field with the original.
+
+The pilot baseline is diagnostic and may be rerun while correcting defects. A
+frozen qualification campaign requires a clean tree, complete pass criteria,
+and a new output directory. It cannot silently overwrite previous evidence.
+Qualification rates include Wilson 95% confidence intervals.
 
 ## Planned extensions
 

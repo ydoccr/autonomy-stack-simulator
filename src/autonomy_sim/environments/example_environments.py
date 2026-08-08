@@ -53,14 +53,22 @@ class GridEnvironment:
         """Distance to disallowed, restricted, or out-of-bounds space."""
         x = float(x)
         y = float(y)
-        world_width = self.width * self.resolution
-        world_height = self.height * self.resolution
-        if not (0.0 <= x < world_width and 0.0 <= y < world_height):
+        half_cell = 0.5 * self.resolution
+        world_left = -half_cell
+        world_right = (self.width - 0.5) * self.resolution
+        world_bottom = -half_cell
+        world_top = (self.height - 0.5) * self.resolution
+        if not (world_left <= x < world_right and world_bottom <= y < world_top):
             return 0.0
         if self.zone_at_position(x, y) in ("disallowed", "restricted"):
             return 0.0
 
-        boundary_clearance = min(x, y, world_width - x, world_height - y)
+        boundary_clearance = min(
+            x - world_left,
+            y - world_bottom,
+            world_right - x,
+            world_top - y,
+        )
         prohibited_bounds = self._get_prohibited_cell_bounds()
         if len(prohibited_bounds) == 0:
             return float(boundary_clearance)
@@ -81,17 +89,17 @@ class GridEnvironment:
             resolution = self.resolution
             self._prohibited_cell_bounds = np.column_stack(
                 (
-                    columns * resolution,
-                    (columns + 1) * resolution,
-                    rows * resolution,
-                    (rows + 1) * resolution,
+                    (columns - 0.5) * resolution,
+                    (columns + 0.5) * resolution,
+                    (rows - 0.5) * resolution,
+                    (rows + 0.5) * resolution,
                 )
             )
         return self._prohibited_cell_bounds
 
     def zone_at_position(self, x, y):
-        column = int(np.floor(float(x) / self.resolution))
-        row = int(np.floor(float(y) / self.resolution))
+        column = int(np.floor(float(x) / self.resolution + 0.5))
+        row = int(np.floor(float(y) / self.resolution + 0.5))
         if not (0 <= row < self.height and 0 <= column < self.width):
             return "out_of_bounds"
         if self.restricted[row, column]:
@@ -113,7 +121,10 @@ class GridEnvironment:
         self,
         proximity_sigma=0.06,
         allow_disallowed=False,
+        minimum_clearance=0.0,
     ):
+        if minimum_clearance < 0.0:
+            raise ValueError("minimum_clearance must be non-negative")
         zone_costmap = self.to_zone_costmap()
         proximity_source = zone_costmap.copy()
         proximity_source[self.restricted] = DISALLOWED_COST
@@ -128,6 +139,12 @@ class GridEnvironment:
         planning_costmap[self.restricted] = np.inf
         if not allow_disallowed:
             planning_costmap[self.disallowed] = np.inf
+        prohibited = self.restricted.copy()
+        if not allow_disallowed:
+            prohibited |= self.disallowed
+        clearance_cells = int(np.ceil(minimum_clearance / self.resolution))
+        if clearance_cells > 0:
+            planning_costmap[_inflate_mask(prohibited, clearance_cells)] = np.inf
         return planning_costmap
 
 
@@ -164,6 +181,31 @@ def _gaussian_blur(costmap, kernel):
         )
 
     return blurred
+
+
+def _inflate_mask(mask, radius_cells):
+    inflated = mask.copy()
+    height, width = mask.shape
+    for row_offset in range(-radius_cells, radius_cells + 1):
+        for column_offset in range(-radius_cells, radius_cells + 1):
+            if np.hypot(row_offset, column_offset) > radius_cells:
+                continue
+            source_row_start = max(0, -row_offset)
+            source_row_end = min(height, height - row_offset)
+            source_column_start = max(0, -column_offset)
+            source_column_end = min(width, width - column_offset)
+            target_row_start = source_row_start + row_offset
+            target_row_end = source_row_end + row_offset
+            target_column_start = source_column_start + column_offset
+            target_column_end = source_column_end + column_offset
+            inflated[
+                target_row_start:target_row_end,
+                target_column_start:target_column_end,
+            ] |= mask[
+                source_row_start:source_row_end,
+                source_column_start:source_column_end,
+            ]
+    return inflated
 
 
 def create_hallway_environment(max_cost=np.inf):

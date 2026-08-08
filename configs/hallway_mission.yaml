@@ -1,8 +1,9 @@
 type: hallway
 
-initial_state: {x: 0.0, y: 0.0, vx: 0.0, vy: 0.0}
-goal: {x: 10.0, y: 10.0}
+initial_state: {x: 0.5, y: 0.5, vx: 0.0, vy: 0.0}
+goal: {x: 9.5, y: 9.5}
 guidance: {waypoint_threshold: 0.2}
+evaluation: {true_goal_tolerance: 0.3}
 
 planner:
   allow_diagonal: true
@@ -12,5 +13,6 @@ planner:
   turn_cost_weight: 0.5
   nominal_speed: 2.0
   proximity_sigma: 0.06
+  minimum_clearance: 0.2
   allow_disallowed: false
   max_cost: .inf

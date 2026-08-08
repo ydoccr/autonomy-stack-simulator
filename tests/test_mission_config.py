@@ -33,23 +33,27 @@ def test_default_random_mission_configuration():
     assert config.width == 10
     assert config.height == 10
     assert config.resolution == 0.1
-    assert config.initial_state.x == 0.0
-    assert config.goal.x == 9.9
-    assert config.goal.y == 9.9
+    assert config.initial_state.x == 0.5
+    assert config.goal.x == 9.5
+    assert config.goal.y == 9.5
     assert config.waypoint_threshold == 0.2
+    assert config.true_goal_tolerance == 0.3
     assert config.planner.max_waypoint_distance == 0.5
     assert config.planner.turn_cost_weight == 0.5
+    assert config.planner.minimum_clearance == 0.2
     assert config.planner.allow_disallowed is False
 
 
 def test_default_hallway_mission_configuration():
     config = load_hallway_mission_config(HALLWAY_CONFIG)
 
-    assert config.initial_state.x == 0.0
-    assert config.goal.x == 10.0
-    assert config.goal.y == 10.0
+    assert config.initial_state.x == 0.5
+    assert config.goal.x == 9.5
+    assert config.goal.y == 9.5
     assert config.waypoint_threshold == 0.2
+    assert config.true_goal_tolerance == 0.3
     assert config.planner.max_waypoint_distance == 1.0
+    assert config.planner.minimum_clearance == 0.2
 
 
 def test_mission_type_must_match_loader(tmp_path):

@@ -55,12 +55,12 @@ def test_environment_classifies_world_positions_by_zone():
     environment.set_zone("disallowed", 0, 1, 2, 3)
     environment.set_zone("restricted", 0, 1, 3, 4)
 
-    assert environment.zone_at_position(0.5, 0.5) == "free"
-    assert environment.zone_at_position(1.5, 0.5) == "occupied"
-    assert environment.zone_at_position(2.5, 0.5) == "disallowed"
-    assert environment.zone_at_position(3.5, 0.5) == "restricted"
-    assert environment.zone_at_position(-0.1, 0.5) == "out_of_bounds"
-    assert environment.zone_at_position(4.0, 0.5) == "out_of_bounds"
+    assert environment.zone_at_position(0.0, 0.0) == "free"
+    assert environment.zone_at_position(1.0, 0.0) == "occupied"
+    assert environment.zone_at_position(2.0, 0.0) == "disallowed"
+    assert environment.zone_at_position(3.0, 0.0) == "restricted"
+    assert environment.zone_at_position(-0.6, 0.0) == "out_of_bounds"
+    assert environment.zone_at_position(3.5, 0.0) == "out_of_bounds"
 
 
 def test_hallway_environment_uses_point_one_resolution():
@@ -204,16 +204,31 @@ def test_clearance_measures_prohibited_zones_and_environment_boundary():
     environment = GridEnvironment(width=4, height=4, resolution=1.0)
     environment.set_zone("disallowed", 1, 2, 2, 3)
 
-    assert environment.clearance_at_position(1.0, 1.5) == 1.0
-    assert environment.clearance_at_position(2.5, 1.5) == 0.0
-    assert environment.clearance_at_position(0.25, 3.0) == 0.25
-    assert environment.clearance_at_position(-0.1, 1.0) == 0.0
+    assert environment.clearance_at_position(1.0, 1.5) == 0.5
+    assert environment.clearance_at_position(2.0, 1.0) == 0.0
+    assert environment.clearance_at_position(0.25, 3.0) == 0.5
+    assert environment.clearance_at_position(-0.6, 1.0) == 0.0
 
 
 def test_clearance_cache_updates_when_zones_change():
     environment = GridEnvironment(width=4, height=4, resolution=1.0)
-    assert environment.clearance_at_position(2.5, 2.5) == 1.5
+    assert environment.clearance_at_position(2.0, 2.0) == 1.5
 
     environment.set_zone("restricted", 2, 3, 3, 4)
 
-    assert environment.clearance_at_position(2.5, 2.5) == 0.5
+    assert environment.clearance_at_position(2.0, 2.0) == 0.5
+
+
+def test_minimum_clearance_inflates_prohibited_cells():
+    environment = GridEnvironment(width=5, height=5, resolution=1.0)
+    environment.set_zone("restricted", 2, 3, 2, 3)
+
+    costmap = environment.to_costmap(
+        proximity_sigma=0.0,
+        minimum_clearance=1.0,
+    )
+
+    assert np.isinf(costmap[2, 2])
+    assert np.isinf(costmap[2, 1])
+    assert np.isinf(costmap[1, 2])
+    assert np.isfinite(costmap[0, 2])

@@ -116,6 +116,10 @@ Run deterministic random-mission trials without opening plots:
 python -m autonomy_sim.experiments.run_monte_carlo --trials 10 --base-seed 7 --sensor-scenario 3
 ```
 
+Sensor scenario `0` is the configured nominal Gaussian sensor. Scenarios `1`
+through `4` are the degradation models listed above. Independent environment
+and sensor seeds are generated for every trial.
+
 The runner writes one row per attempted trial to
 `results/monte_carlo/trials.csv` and aggregate counts, rates, and statistics to
 `results/monte_carlo/summary.json`. Planning failures are recorded and do not
@@ -150,6 +154,36 @@ control quantities.
 Dynamics applies acceleration and speed limits before returning the applied
 control. The Kalman filter predicts from that applied value, keeping estimator
 propagation consistent with the simulated vehicle response.
+
+## Reproducible campaigns
+
+Campaign YAML files freeze the simulation and mission inputs, trial count, seed
+schedule, worker count, output location, and optional qualification gates. Run
+the pilot or frozen nominal baseline with:
+
+```powershell
+python -m autonomy_sim.experiments.run_campaign run --campaign-config configs/pilot_baseline.yaml
+python -m autonomy_sim.experiments.run_campaign run --campaign-config configs/qualification_baseline.yaml
+```
+
+Each campaign directory contains archived YAML inputs, SHA-256 hashes, Git and
+runtime metadata in `manifest.json`, per-trial CSV data, aggregate statistics
+and Wilson 95% confidence intervals, explicit gate results, and a summary plot.
+Frozen campaigns require a clean Git tree and refuse to overwrite existing
+results.
+
+Any recorded trial can be regenerated from its archived inputs and seeds, then
+compared field-by-field with its original row:
+
+```powershell
+python -m autonomy_sim.experiments.run_campaign replay --manifest results/qualification/nominal_baseline_v1/manifest.json --trial 17
+```
+
+The nominal baseline uses a 0.20-unit onboard waypoint threshold and a separate
+0.30-unit truth-evaluation tolerance. The first triggers completion from the
+estimated state; the second judges physical goal attainment with allowance for
+nominal estimation error. The planner also inflates prohibited zones by the
+configured minimum clearance.
 
 ## Verify
 

@@ -25,6 +25,7 @@ def plan_hallway_mission(config: HallwayMissionConfig):
     costmap = environment.to_costmap(
         proximity_sigma=config.planner.proximity_sigma,
         allow_disallowed=config.planner.allow_disallowed,
+        minimum_clearance=config.planner.minimum_clearance,
     )
     zone_costmap = environment.to_zone_costmap()
 
@@ -86,6 +87,7 @@ def run_hallway_mission(
         initial_state=mission_config.initial_state,
         waypoints=waypoints,
         waypoint_threshold=mission_config.waypoint_threshold,
+        true_goal_tolerance=mission_config.true_goal_tolerance,
         environment=environment,
         show_plots=show_plots,
         show_metrics=show_metrics,

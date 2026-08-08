@@ -45,7 +45,12 @@ def fake_mission_runner(
             "true_goal_reached": True,
             "true_mission_success": True,
             "termination_state": "goal_reached",
+            "final_true_distance": 0.1,
             "completion_time": 4.0,
+            "actual_path_length": 2.1,
+            "planned_path_length": 2.0,
+            "mean_estimation_error": 0.2,
+            "max_estimation_error": 0.4,
             "rmse_estimation_error": 0.25,
             "mean_true_cross_track_error": 0.2,
             "max_true_cross_track_error": 0.5,
@@ -76,7 +81,12 @@ def fake_mission_runner(
             "true_goal_reached": False,
             "true_mission_success": False,
             "termination_state": "planning_failure",
+            "final_true_distance": np.nan,
             "completion_time": np.nan,
+            "actual_path_length": np.nan,
+            "planned_path_length": np.nan,
+            "mean_estimation_error": np.nan,
+            "max_estimation_error": np.nan,
             "rmse_estimation_error": np.nan,
             "mean_true_cross_track_error": np.nan,
             "max_true_cross_track_error": np.nan,
@@ -172,6 +182,20 @@ def test_monte_carlo_changes_seeds_when_base_seed_changes(tmp_path):
     ]
 
 
+def test_monte_carlo_accepts_nominal_sensor_scenario(tmp_path):
+    rows, summary = run_monte_carlo(
+        SIMULATION_CONFIG,
+        MISSION_CONFIG,
+        trials=1,
+        sensor_scenario=0,
+        output_dir=tmp_path,
+        mission_runner=fake_mission_runner,
+    )
+
+    assert rows[0]["sensor_scenario"] == 0
+    assert summary["configuration"]["sensor_scenario"] == 0
+
+
 def test_flatten_trial_result_expands_zone_times():
     result, *_ = fake_mission_runner(
         SIMULATION_CONFIG,
@@ -192,6 +216,7 @@ def test_flatten_trial_result_expands_zone_times():
     assert row["estimated_free_time"] == 4.0
     assert row["minimum_true_clearance"] == 0.4
     assert row["applied_control_effort"] == 1.8
+    assert row["final_true_distance"] == 0.1
 
 
 def test_summary_counts_failures_and_excludes_them_from_statistics():

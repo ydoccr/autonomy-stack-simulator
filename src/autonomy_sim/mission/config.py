@@ -16,6 +16,7 @@ class PlannerConfig:
     turn_cost_weight: float
     nominal_speed: float
     proximity_sigma: float
+    minimum_clearance: float
     allow_disallowed: bool
     max_cost: float
 
@@ -25,6 +26,7 @@ class HallwayMissionConfig:
     initial_state: VehicleState
     goal: Waypoint
     waypoint_threshold: float
+    true_goal_tolerance: float
     planner: PlannerConfig
 
 
@@ -37,6 +39,7 @@ class RandomMissionConfig:
     initial_state: VehicleState
     goal: Waypoint
     waypoint_threshold: float
+    true_goal_tolerance: float
     planner: PlannerConfig
 
 
@@ -46,9 +49,15 @@ def load_hallway_mission_config(path) -> HallwayMissionConfig:
         initial_state=_vehicle_state(settings),
         goal=_goal(settings),
         waypoint_threshold=_waypoint_threshold(settings),
+        true_goal_tolerance=_true_goal_tolerance(settings),
         planner=_planner(settings),
     )
-    _validate_common(config.initial_state, config.goal, config.waypoint_threshold)
+    _validate_common(
+        config.initial_state,
+        config.goal,
+        config.waypoint_threshold,
+        config.true_goal_tolerance,
+    )
     if round(config.planner.max_waypoint_distance / 0.1) < 1:
         raise ValueError("planner.max_waypoint_distance is below hallway resolution")
     return config
@@ -79,9 +88,15 @@ def load_random_mission_config(path) -> RandomMissionConfig:
         initial_state=_vehicle_state(settings),
         goal=_goal(settings),
         waypoint_threshold=_waypoint_threshold(settings),
+        true_goal_tolerance=_true_goal_tolerance(settings),
         planner=_planner(settings),
     )
-    _validate_common(config.initial_state, config.goal, config.waypoint_threshold)
+    _validate_common(
+        config.initial_state,
+        config.goal,
+        config.waypoint_threshold,
+        config.true_goal_tolerance,
+    )
     if config.width <= 0 or config.height <= 0:
         raise ValueError("environment width and height must be positive")
     if config.resolution <= 0.0:
@@ -143,6 +158,11 @@ def _waypoint_threshold(settings):
     return _number(guidance, "waypoint_threshold", "guidance")
 
 
+def _true_goal_tolerance(settings):
+    evaluation = _mapping(settings, "evaluation", "mission")
+    return _number(evaluation, "true_goal_tolerance", "evaluation")
+
+
 def _planner(settings):
     planner = _mapping(settings, "planner", "mission")
     allow_diagonal = _boolean(planner, "allow_diagonal", "planner")
@@ -159,6 +179,7 @@ def _planner(settings):
         turn_cost_weight=_number(planner, "turn_cost_weight", "planner"),
         nominal_speed=_number(planner, "nominal_speed", "planner"),
         proximity_sigma=_number(planner, "proximity_sigma", "planner"),
+        minimum_clearance=_number(planner, "minimum_clearance", "planner"),
         allow_disallowed=allow_disallowed,
         max_cost=_number(planner, "max_cost", "planner", allow_infinite=True),
     )
@@ -172,17 +193,21 @@ def _planner(settings):
         raise ValueError("planner.nominal_speed must be positive")
     if config.proximity_sigma < 0.0:
         raise ValueError("planner.proximity_sigma must be non-negative")
+    if config.minimum_clearance < 0.0:
+        raise ValueError("planner.minimum_clearance must be non-negative")
     if config.max_cost <= 0.0:
         raise ValueError("planner.max_cost must be positive")
     return config
 
 
-def _validate_common(initial_state, goal, waypoint_threshold):
+def _validate_common(initial_state, goal, waypoint_threshold, true_goal_tolerance):
     values = [*initial_state.as_array(), *goal.as_array()]
     if not np.all(np.isfinite(values)):
         raise ValueError("mission initial state and goal must be finite")
     if waypoint_threshold <= 0.0:
         raise ValueError("guidance.waypoint_threshold must be positive")
+    if true_goal_tolerance <= 0.0:
+        raise ValueError("evaluation.true_goal_tolerance must be positive")
 
 
 def _mapping(settings, name, section_name):

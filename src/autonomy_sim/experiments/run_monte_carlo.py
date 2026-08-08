@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -30,7 +31,12 @@ TRIAL_FIELDS = (
     "true_goal_reached",
     "true_mission_success",
     "termination_state",
+    "final_true_distance",
     "completion_time",
+    "actual_path_length",
+    "planned_path_length",
+    "mean_estimation_error",
+    "max_estimation_error",
     "rmse_estimation_error",
     "mean_true_cross_track_error",
     "max_true_cross_track_error",
@@ -73,33 +79,33 @@ def run_monte_carlo(
     sensor_scenario=3,
     output_dir=Path("results/monte_carlo"),
     mission_runner=run_random_sensor_scenario,
+    workers=1,
 ):
     if trials < 1:
         raise ValueError("trials must be at least one")
-    if sensor_scenario not in (1, 2, 3, 4):
-        raise ValueError("sensor_scenario must be between one and four")
+    if sensor_scenario not in (0, 1, 2, 3, 4):
+        raise ValueError("sensor_scenario must be between zero and four")
+    if workers < 1:
+        raise ValueError("workers must be at least one")
 
     seed_pairs = _trial_seed_pairs(trials, base_seed)
-    rows = []
-    for trial, (environment_seed, sensor_seed) in enumerate(seed_pairs):
-        result, *_ = mission_runner(
-            simulation_config=simulation_config,
-            mission_config=mission_config,
-            scenario_number=sensor_scenario,
-            environment_seed=environment_seed,
-            sensor_seed=sensor_seed,
-            show_plots=False,
-            show_metrics=False,
+    tasks = [
+        (
+            trial,
+            environment_seed,
+            sensor_seed,
+            sensor_scenario,
+            simulation_config,
+            mission_config,
+            mission_runner,
         )
-        rows.append(
-            flatten_trial_result(
-                trial=trial,
-                environment_seed=environment_seed,
-                sensor_seed=sensor_seed,
-                sensor_scenario=sensor_scenario,
-                result=result,
-            )
-        )
+        for trial, (environment_seed, sensor_seed) in enumerate(seed_pairs)
+    ]
+    if workers == 1:
+        rows = [_run_trial(task) for task in tasks]
+    else:
+        with ProcessPoolExecutor(max_workers=workers) as executor:
+            rows = list(executor.map(_run_trial, tasks))
 
     summary = summarize_trials(
         rows,
@@ -108,6 +114,34 @@ def run_monte_carlo(
     )
     write_results(rows, summary, output_dir)
     return rows, summary
+
+
+def _run_trial(task):
+    (
+        trial,
+        environment_seed,
+        sensor_seed,
+        sensor_scenario,
+        simulation_config,
+        mission_config,
+        mission_runner,
+    ) = task
+    result, *_ = mission_runner(
+        simulation_config=simulation_config,
+        mission_config=mission_config,
+        scenario_number=sensor_scenario,
+        environment_seed=environment_seed,
+        sensor_seed=sensor_seed,
+        show_plots=False,
+        show_metrics=False,
+    )
+    return flatten_trial_result(
+        trial=trial,
+        environment_seed=environment_seed,
+        sensor_seed=sensor_seed,
+        sensor_scenario=sensor_scenario,
+        result=result,
+    )
 
 
 def flatten_trial_result(
@@ -138,7 +172,12 @@ def flatten_trial_result(
         "true_goal_reached": metrics["true_goal_reached"],
         "true_mission_success": metrics["true_mission_success"],
         "termination_state": metrics["termination_state"],
+        "final_true_distance": metrics["final_true_distance"],
         "completion_time": metrics["completion_time"],
+        "actual_path_length": metrics["actual_path_length"],
+        "planned_path_length": metrics["planned_path_length"],
+        "mean_estimation_error": metrics["mean_estimation_error"],
+        "max_estimation_error": metrics["max_estimation_error"],
         "rmse_estimation_error": metrics["rmse_estimation_error"],
         "mean_true_cross_track_error": metrics["mean_true_cross_track_error"],
         "max_true_cross_track_error": metrics["max_true_cross_track_error"],
@@ -244,6 +283,32 @@ def summarize_trials(rows, base_seed, sensor_scenario):
                 safety_violation_count,
                 trial_count,
             ),
+            "false_completion_given_plan": _rate(
+                false_completion_count,
+                planning_success_count,
+            ),
+            "safety_violation_given_plan": _rate(
+                safety_violation_count,
+                planning_success_count,
+            ),
+        },
+        "confidence_intervals_95": {
+            "planning_success": _wilson_interval(
+                planning_success_count,
+                trial_count,
+            ),
+            "true_mission_success_given_plan": _wilson_interval(
+                mission_success_count,
+                planning_success_count,
+            ),
+            "false_completion_given_plan": _wilson_interval(
+                false_completion_count,
+                planning_success_count,
+            ),
+            "safety_violation_given_plan": _wilson_interval(
+                safety_violation_count,
+                planning_success_count,
+            ),
         },
         "termination_counts": dict(
             sorted(Counter(row["termination_state"] for row in rows).items())
@@ -322,6 +387,23 @@ def _rate(count, total):
     return float(count / total)
 
 
+def _wilson_interval(count, total, z=1.959963984540054):
+    if total == 0:
+        return {"lower": None, "upper": None}
+    proportion = count / total
+    denominator = 1.0 + z**2 / total
+    center = (proportion + z**2 / (2.0 * total)) / denominator
+    half_width = (
+        z
+        * np.sqrt(proportion * (1.0 - proportion) / total + z**2 / (4.0 * total**2))
+        / denominator
+    )
+    return {
+        "lower": float(max(0.0, center - half_width)),
+        "upper": float(min(1.0, center + half_width)),
+    }
+
+
 def _statistics(rows, field):
     values = np.array(
         [row[field] for row in rows if _is_finite_number(row[field])],
@@ -357,8 +439,8 @@ def main():
     parser.add_argument(
         "--sensor-scenario",
         type=int,
-        choices=[1, 2, 3, 4],
-        default=3,
+        choices=[0, 1, 2, 3, 4],
+        default=0,
     )
     parser.add_argument(
         "--output-dir",
@@ -367,6 +449,7 @@ def main():
     )
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--mission-config", type=Path, default=DEFAULT_MISSION_CONFIG)
+    parser.add_argument("--workers", type=int, default=1)
     args = parser.parse_args()
     _, summary = run_monte_carlo(
         load_config(args.config),
@@ -375,6 +458,7 @@ def main():
         base_seed=args.base_seed,
         sensor_scenario=args.sensor_scenario,
         output_dir=args.output_dir,
+        workers=args.workers,
     )
     print(json.dumps(summary, indent=2, sort_keys=True))
 

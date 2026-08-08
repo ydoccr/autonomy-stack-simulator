@@ -1,0 +1,11 @@
+type: monte_carlo_campaign
+name: pilot_nominal_v1
+frozen: false
+trials: 50
+base_seed: 20260808
+sensor_scenario: 0
+workers: 8
+simulation_config: default.yaml
+mission_config: random_mission.yaml
+output_dir: ../results/qualification/pilot_nominal_v1
+criteria: {}

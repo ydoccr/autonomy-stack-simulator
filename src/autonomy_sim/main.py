@@ -86,6 +86,7 @@ def run_simulation(
     initial_state=None,
     waypoints=None,
     waypoint_threshold=None,
+    true_goal_tolerance=None,
     environment=None,
     sensor_model=None,
     scenario=None,
@@ -100,6 +101,8 @@ def run_simulation(
         waypoints = config.waypoints
     if waypoint_threshold is None:
         waypoint_threshold = config.guidance.waypoint_threshold
+    if true_goal_tolerance is None:
+        true_goal_tolerance = waypoint_threshold
     guidance_config = GuidanceConfig(
         type=config.guidance.type,
         waypoint_threshold=waypoint_threshold,
@@ -238,7 +241,7 @@ def run_simulation(
         trajectory,
         waypoints,
         waypoint_tracker.complete,
-        waypoint_threshold,
+        true_goal_tolerance,
         environment,
     )
     metrics = run_metrics.calculate()
