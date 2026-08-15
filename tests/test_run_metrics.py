@@ -249,6 +249,28 @@ def test_disallowed_entry_fails_during_normal_operation():
     assert metrics["termination_state"] == "safety_violation"
 
 
+def test_swept_segment_detects_restricted_crossing_between_safe_samples():
+    environment = GridEnvironment(width=5, height=1, resolution=1.0)
+    environment.set_zone("restricted", 0, 1, 1, 2)
+    trajectory = [create_trajectory()[0], create_trajectory()[-1]]
+    trajectory[-1]["time"] = 1.0
+    trajectory[-1]["x"] = 4.0
+    trajectory[-1]["x_est"] = 4.0
+
+    metrics = RunMetrics(
+        trajectory,
+        [Waypoint(x=4.0, y=0.0)],
+        path_complete=True,
+        goal_tolerance=0.2,
+        environment=environment,
+    ).calculate()
+
+    assert metrics["true_zone_time_seconds"]["restricted"] == 0.0
+    assert metrics["restricted_violation"] is True
+    assert metrics["true_mission_success"] is False
+    assert metrics["termination_state"] == "safety_violation"
+
+
 def test_out_of_bounds_time_fails_mission():
     environment = GridEnvironment(width=2, height=1, resolution=1.0)
     trajectory = create_trajectory()

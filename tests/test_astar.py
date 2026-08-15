@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 from autonomy_sim.planning.astar import astar
@@ -101,7 +103,7 @@ def test_long_edge_cannot_skip_an_obstacle():
     assert path == []
 
 
-def test_long_edge_cannot_cut_through_a_costly_zone():
+def test_long_edge_can_integrate_finite_zone_cost():
     costmap = create_empty_costmap(width=5, height=1)
     zone_costmap = costmap.copy()
     costmap[0, 2] = 10.0
@@ -117,10 +119,51 @@ def test_long_edge_cannot_cut_through_a_costly_zone():
         zone_costmap=zone_costmap,
     )
 
-    assert path[0] == (0, 0)
-    assert path[-1] == (0, 4)
-    assert (0, 2) in path
-    assert path != [(0, 0), (0, 4)]
+    assert path == [(0, 0), (0, 4)]
+
+
+def test_heading_aware_state_finds_lower_total_turn_cost_path():
+    costmap = create_empty_costmap(width=5, height=2)
+    costmap[1, 1] = 7.0
+    costmap[0, 4] = np.inf
+
+    path = astar(
+        costmap,
+        start=(1, 0),
+        goal=(1, 4),
+        allow_diagonal=False,
+        turn_cost_weight=math.sqrt(2.0),
+        nominal_speed=1.0,
+    )
+
+    # At (1, 3), the upper route costs 9 and the straight route costs 10.
+    # The upper route then pays a third 90-degree turn, however, so its total
+    # cost is 12 while the heading-aligned straight route finishes for 11.
+    assert path == [(1, 0), (1, 1), (1, 2), (1, 3), (1, 4)]
+
+
+def test_zero_turn_weight_matches_cell_based_astar_behavior():
+    costmap = create_empty_costmap(width=5, height=2)
+    costmap[1, 1] = 7.0
+    costmap[0, 4] = np.inf
+
+    path = astar(
+        costmap,
+        start=(1, 0),
+        goal=(1, 4),
+        allow_diagonal=False,
+        turn_cost_weight=0.0,
+    )
+
+    assert path == [
+        (1, 0),
+        (0, 0),
+        (0, 1),
+        (0, 2),
+        (0, 3),
+        (1, 3),
+        (1, 4),
+    ]
 
 
 def test_astar_returns_empty_path_above_max_cost():

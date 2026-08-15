@@ -23,6 +23,22 @@ Grid indices identify cell centers. Cell `(row, column)` is located at
 half a cell beyond its outermost centers. Planning, zone lookup, visualization,
 and clearance calculations use this same convention.
 
+Planner edges use a conservative grid supercover: every closed cell rectangle
+touched by the line segment between cell centers is checked. This includes cells
+contacted only at an edge or corner, so a multi-cell step cannot jump through
+prohibited geometry. Finite occupied-zone cost remains traversable and is
+averaged over the intersected cells.
+
+## Planner state and cost
+
+A* combines distance-based fuel and environmental cost with per-edge waypoint
+cost and a heading-change penalty. When the turn penalty is enabled, internal
+search state is `(cell, incoming_direction)` because future turn cost depends on
+the arrival heading. The returned path remains a list of grid cells. With zero
+turn-cost weight, direction is collapsed and the search is ordinary cell-based
+A*. The Euclidean-distance heuristic multiplied by fuel rate remains admissible
+because it ignores only nonnegative environmental, waypoint, and turn costs.
+
 ## Zone policy
 
 - Free cells have no environmental cost.
@@ -32,7 +48,20 @@ and clearance calculations use this same convention.
 - Restricted cells are always prohibited.
 
 True zone exposure determines safety outcomes. Estimated exposure records what
-the onboard system believed.
+the onboard system believed. Zone-duration accounting retains midpoint
+classification for each simulation interval, while true safety-violation flags
+also evaluate the complete swept line segment between consecutive truth samples.
+Thus a brief prohibited crossing is detected even when both recorded endpoints
+and the interval midpoint are safe.
+
+## State-estimation covariance
+
+The linear Kalman filter uses the same four-state point-mass model and applied
+acceleration input as the simulated vehicle. Its measurement update uses Joseph
+form,
+`P = (I - K H) P (I - K H)^T + K R K^T`, which is algebraically equivalent to
+the simpler covariance update in exact arithmetic but better preserves symmetry
+and positive semidefiniteness under finite precision.
 
 ## Qualification metric definitions
 

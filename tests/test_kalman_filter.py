@@ -80,3 +80,21 @@ def test_step_predicts_and_updates():
     assert isinstance(estimated_state, VehicleState)
     assert np.isclose(estimated_state.x, 0.1, atol=0.1)
     assert np.isclose(estimated_state.vx, 1.0, atol=0.1)
+
+
+def test_repeated_updates_keep_covariance_symmetric_and_positive_semidefinite():
+    kf = KalmanFilter(dt=0.1, process_var=1e-6, meas_var=1e-4)
+    kf.reset(VehicleState(x=0.0, y=0.0, vx=0.0, vy=0.0))
+    control = ControlInput(ax=0.3, ay=-0.2)
+    true_state = np.zeros(4, dtype=float)
+    rng = np.random.default_rng(12)
+
+    for _ in range(500):
+        true_state = kf.F @ true_state + kf.B @ control.as_array()
+        measurement = SensorData.from_array(true_state + rng.normal(0.0, 0.01, size=4))
+        estimated_state = kf.step(control=control, measurement=measurement)
+
+        assert np.allclose(kf.P, kf.P.T, rtol=0.0, atol=1e-12)
+        assert np.min(np.linalg.eigvalsh(kf.P)) >= -1e-12
+
+    assert np.linalg.norm(estimated_state.as_array() - true_state) < 0.05
