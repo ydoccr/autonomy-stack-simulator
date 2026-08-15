@@ -100,6 +100,9 @@ class GridEnvironment:
     def zone_at_position(self, x, y):
         column = int(np.floor(float(x) / self.resolution + 0.5))
         row = int(np.floor(float(y) / self.resolution + 0.5))
+        return self.zone_at_cell(row, column)
+
+    def zone_at_cell(self, row, column):
         if not (0 <= row < self.height and 0 <= column < self.width):
             return "out_of_bounds"
         if self.restricted[row, column]:

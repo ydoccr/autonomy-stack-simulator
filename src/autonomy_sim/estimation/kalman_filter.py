@@ -100,7 +100,11 @@ class KalmanFilter:
 
         self.x = self.x + kalman_gain @ innovation
         identity = np.eye(4, dtype=float)
-        self.P = (identity - kalman_gain @ self.H) @ self.P
+        covariance_reduction = identity - kalman_gain @ self.H
+        self.P = (
+            covariance_reduction @ self.P @ covariance_reduction.T
+            + kalman_gain @ self.R @ kalman_gain.T
+        )
 
         return VehicleState.from_array(self.x)
 

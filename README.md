@@ -133,6 +133,11 @@ and applied acceleration; whether dynamics limits changed the command; true and
 estimated cross-track error; true and estimated safety clearance; and true and
 estimated zone classification.
 
+Zone-duration metrics retain midpoint classification for each sampled interval.
+Safety-violation flags additionally check the full true-state segment between
+samples, so a prohibited crossing cannot be hidden by safe endpoints or a safe
+midpoint.
+
 Run-level metrics include:
 
 - mean, maximum, and root-mean-square true and estimated cross-track error;
@@ -164,6 +169,7 @@ the pilot or frozen nominal baseline with:
 ```powershell
 python -m autonomy_sim.experiments.run_campaign run --campaign-config configs/pilot_baseline.yaml
 python -m autonomy_sim.experiments.run_campaign run --campaign-config configs/qualification_baseline.yaml
+python -m autonomy_sim.experiments.run_campaign run --campaign-config configs/qualification_baseline_v2.yaml
 ```
 
 Each campaign directory contains archived YAML inputs, SHA-256 hashes, Git and
@@ -185,7 +191,7 @@ estimated state; the second judges physical goal attainment with allowance for
 nominal estimation error. The planner also inflates prohibited zones by the
 configured minimum clearance.
 
-### Frozen nominal baseline result
+### Frozen nominal baseline results
 
 `nominal_baseline_v1` passed all six predeclared gates across 500 trials. It
 achieved 92.0% planning success, 99.78% mission success given a valid plan,
@@ -193,6 +199,14 @@ achieved 92.0% planning success, 99.78% mission success given a valid plan,
 true cross-track RMSE, and no control saturation. The archived evidence is in
 `results/qualification/nominal_baseline_v1/`; the separate 50-trial diagnostic
 pilot is in `results/qualification/pilot_nominal_v1/`.
+
+`nominal_baseline_v2` preserves the same 500 trials, seed schedule, simulation
+and mission inputs, and gates after the planner, swept-safety, and covariance
+correctness updates. It passed all six gates with 92.0% planning success, 100%
+mission success given a valid plan, no false completions or safety violations,
+0.0373 mean true cross-track RMSE, and no control saturation. Its archived
+evidence is in `results/qualification/nominal_baseline_v2/`; v1 remains
+immutable historical evidence.
 
 ## Verify
 

@@ -2,6 +2,7 @@ import numpy as np
 
 from autonomy_sim.core.types import VehicleState
 from autonomy_sim.environments.example_environments import ZONE_NAMES
+from autonomy_sim.environments.grid_geometry import cells_intersected_by_segment
 
 
 RUN_METRIC_FIELDS = (
@@ -148,6 +149,7 @@ class RunMetrics:
         planned_path_length = self._path_length(planned_positions)
         true_zone_time = self._zone_time(times, true_positions)
         estimated_zone_time = self._zone_time(times, estimated_positions)
+        true_zone_violations = self._swept_zone_violations(true_positions)
 
         commanded_control_effort = 0.0
         applied_control_effort = 0.0
@@ -168,15 +170,15 @@ class RunMetrics:
 
         onboard_completion = self.path_complete
         true_goal_reached = final_distance < self.goal_tolerance
-        if true_zone_time is None:
+        if true_zone_violations is None:
             restricted_violation = None
             disallowed_violation = None
             out_of_bounds_violation = None
             safety_violation = False
         else:
-            restricted_violation = true_zone_time["restricted"] > 0.0
-            disallowed_violation = true_zone_time["disallowed"] > 0.0
-            out_of_bounds_violation = true_zone_time["out_of_bounds"] > 0.0
+            restricted_violation = true_zone_violations["restricted"]
+            disallowed_violation = true_zone_violations["disallowed"]
+            out_of_bounds_violation = true_zone_violations["out_of_bounds"]
             safety_violation = (
                 restricted_violation or disallowed_violation or out_of_bounds_violation
             )
@@ -263,6 +265,36 @@ class RunMetrics:
             )
             zone_time[zone] += float(time_step)
         return zone_time
+
+    def _swept_zone_violations(self, positions):
+        if self.environment is None:
+            return None
+
+        violations = {
+            "restricted": False,
+            "disallowed": False,
+            "out_of_bounds": False,
+        }
+        if len(positions) == 1:
+            segments = [(positions[0], positions[0])]
+        else:
+            segments = zip(positions[:-1], positions[1:])
+
+        for start, end in segments:
+            start_grid = (
+                start[1] / self.environment.resolution,
+                start[0] / self.environment.resolution,
+            )
+            end_grid = (
+                end[1] / self.environment.resolution,
+                end[0] / self.environment.resolution,
+            )
+            for row, column in cells_intersected_by_segment(start_grid, end_grid):
+                zone = self.environment.zone_at_cell(row, column)
+                if zone in violations:
+                    violations[zone] = True
+
+        return violations
 
     @staticmethod
     def _path_length(positions):

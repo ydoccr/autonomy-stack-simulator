@@ -3,7 +3,11 @@ import math
 
 import numpy as np
 
+from autonomy_sim.environments.grid_geometry import cells_intersected_by_segment
+
 GridCell = tuple[int, int]
+GridDirection = tuple[int, int]
+SearchState = tuple[GridCell, GridDirection]
 
 
 def astar(
@@ -35,64 +39,104 @@ def astar(
         return [start]
 
     start_direction = (0, 0)
+    start_state = (start, start_direction)
+    neighbor_steps = _neighbor_steps(allow_diagonal, max_distance)
     frontier = []
     push_count = 0
     start_priority = _heuristic(start, goal, fuel_rate)
     heapq.heappush(
         frontier,
-        (start_priority, push_count, 0.0, start, start_direction),
+        (start_priority, push_count, 0.0, start_state),
     )
 
     came_from = {}
-    g_score = {start: 0.0}
+    g_score = {start_state: 0.0}
+    cell_states = {start: {start_direction: 0.0}}
+    neighbor_cache = {}
+    turn_cost_cache = {}
 
     while frontier:
-        _, _, queued_cost, current, incoming_direction = heapq.heappop(frontier)
-        if queued_cost > g_score[current]:
+        _, _, queued_cost, current_state = heapq.heappop(frontier)
+        if current_state not in g_score or queued_cost > g_score[current_state]:
             continue
+        current, incoming_direction = current_state
         if current == goal:
-            return _reconstruct_path(came_from, current)
+            return _reconstruct_path(came_from, current_state)
 
-        neighbors = _neighbors(
-            costmap,
-            current,
-            allow_diagonal,
-            max_distance,
-            zone_costmap,
-        )
+        if current not in neighbor_cache:
+            neighbor_cache[current] = _neighbors(
+                costmap,
+                current,
+                allow_diagonal,
+                max_distance,
+                neighbor_steps,
+            )
+        neighbors = neighbor_cache[current]
         for neighbor, direction, distance, environmental_cost in neighbors:
             # Same cost split as the NASA planner: fuel + environment.
             travel_cost = distance * (fuel_rate + environmental_cost)
-            turn_cost = _turn_cost(
-                incoming_direction,
-                direction,
-                nominal_speed,
-                turn_cost_weight,
-            )
+            turn = (incoming_direction, direction)
+            if turn not in turn_cost_cache:
+                turn_cost_cache[turn] = _turn_cost(
+                    incoming_direction,
+                    direction,
+                    nominal_speed,
+                    turn_cost_weight,
+                )
+            turn_cost = turn_cost_cache[turn]
             edge_cost = travel_cost + waypoint_cost + turn_cost
-            tentative_cost = g_score[current] + edge_cost
+            tentative_cost = g_score[current_state] + edge_cost
             if tentative_cost > max_cost:
                 continue
 
-            if tentative_cost < g_score.get(neighbor, math.inf):
-                came_from[neighbor] = current
-                g_score[neighbor] = tentative_cost
-                priority = tentative_cost + _heuristic(
-                    neighbor,
-                    goal,
-                    fuel_rate,
-                )
-                push_count += 1
-                heapq.heappush(
-                    frontier,
-                    (
-                        priority,
-                        push_count,
-                        tentative_cost,
-                        neighbor,
-                        direction,
-                    ),
-                )
+            state_direction = direction
+            if turn_cost_weight == 0.0:
+                state_direction = start_direction
+            neighbor_state = (neighbor, state_direction)
+            if tentative_cost >= g_score.get(neighbor_state, math.inf):
+                continue
+
+            arrivals = cell_states.setdefault(neighbor, {})
+            if _arrival_is_dominated(
+                arrivals,
+                state_direction,
+                tentative_cost,
+                turn_cost_cache,
+                nominal_speed,
+                turn_cost_weight,
+            ):
+                continue
+
+            dominated_directions = _dominated_arrivals(
+                arrivals,
+                state_direction,
+                tentative_cost,
+                turn_cost_cache,
+                nominal_speed,
+                turn_cost_weight,
+            )
+            for dominated_direction in dominated_directions:
+                arrivals.pop(dominated_direction)
+                g_score.pop((neighbor, dominated_direction), None)
+
+            came_from[neighbor_state] = current_state
+            g_score[neighbor_state] = tentative_cost
+            arrivals[state_direction] = tentative_cost
+            priority = tentative_cost + _heuristic(
+                neighbor,
+                goal,
+                fuel_rate,
+            )
+            push_count += 1
+            heapq.heappush(
+                frontier,
+                (
+                    priority,
+                    push_count,
+                    tentative_cost,
+                    neighbor_state,
+                ),
+            )
 
     return []
 
@@ -102,12 +146,51 @@ def _neighbors(
     cell,
     allow_diagonal,
     max_distance,
-    zone_costmap,
+    neighbor_steps=None,
 ):
     neighbors = []
     height, width = costmap.shape
     row, column = cell
 
+    if neighbor_steps is None:
+        neighbor_steps = _neighbor_steps(allow_diagonal, max_distance)
+
+    for (
+        row_change,
+        column_change,
+        distance,
+        direction,
+        crossed_offsets,
+    ) in neighbor_steps:
+        neighbor_row = row + row_change
+        neighbor_column = column + column_change
+        inside_grid = 0 <= neighbor_row < height and 0 <= neighbor_column < width
+        if not inside_grid:
+            continue
+
+        crossed_cells = [
+            (row + row_offset, column + column_offset)
+            for row_offset, column_offset in crossed_offsets
+        ]
+        crossed_costs = [costmap[crossed_cell] for crossed_cell in crossed_cells]
+        if not np.all(np.isfinite(crossed_costs)):
+            continue
+
+        environmental_cost = float(np.mean(crossed_costs))
+        neighbors.append(
+            (
+                (neighbor_row, neighbor_column),
+                direction,
+                distance,
+                environmental_cost,
+            )
+        )
+
+    return neighbors
+
+
+def _neighbor_steps(allow_diagonal, max_distance):
+    steps = []
     for row_change in range(-max_distance, max_distance + 1):
         for column_change in range(-max_distance, max_distance + 1):
             if row_change == 0 and column_change == 0:
@@ -119,60 +202,30 @@ def _neighbors(
             if distance > max_distance:
                 continue
 
-            neighbor_row = row + row_change
-            neighbor_column = column + column_change
-            inside_grid = 0 <= neighbor_row < height and 0 <= neighbor_column < width
-            if not inside_grid:
-                continue
-
-            crossed_cells = _cells_along_edge(
-                cell,
-                (neighbor_row, neighbor_column),
-            )
-            crossed_costs = [costmap[crossed_cell] for crossed_cell in crossed_cells]
-            if not np.all(np.isfinite(crossed_costs)):
-                continue
-
-            if zone_costmap is not None and len(crossed_cells) > 1:
-                crossed_zone_costs = [
-                    zone_costmap[crossed_cell] for crossed_cell in crossed_cells
-                ]
-                if np.any(np.asarray(crossed_zone_costs) > 0.0):
-                    continue
-
-            environmental_cost = float(np.mean(crossed_costs))
             direction_divisor = math.gcd(abs(row_change), abs(column_change))
             direction = (
                 row_change // direction_divisor,
                 column_change // direction_divisor,
             )
-            neighbors.append(
+            crossed_offsets = _cells_along_edge(
+                (0, 0),
+                (row_change, column_change),
+            )
+            steps.append(
                 (
-                    (neighbor_row, neighbor_column),
-                    direction,
+                    row_change,
+                    column_change,
                     distance,
-                    environmental_cost,
+                    direction,
+                    crossed_offsets,
                 )
             )
 
-    return neighbors
+    return steps
 
 
 def _cells_along_edge(start, end):
-    row_change = end[0] - start[0]
-    column_change = end[1] - start[1]
-    number_of_steps = max(abs(row_change), abs(column_change))
-    cells = []
-
-    for step in range(1, number_of_steps + 1):
-        fraction = step / number_of_steps
-        row = round(start[0] + fraction * row_change)
-        column = round(start[1] + fraction * column_change)
-        cell = (row, column)
-        if not cells or cell != cells[-1]:
-            cells.append(cell)
-
-    return cells
+    return [cell for cell in cells_intersected_by_segment(start, end) if cell != start]
 
 
 def _turn_cost(
@@ -197,20 +250,81 @@ def _turn_cost(
     return turn_cost_weight * velocity_change
 
 
+def _arrival_is_dominated(
+    arrivals,
+    new_direction,
+    new_cost,
+    turn_cost_cache,
+    nominal_speed,
+    turn_cost_weight,
+):
+    for existing_direction, existing_cost in arrivals.items():
+        heading_change = _cached_turn_cost(
+            existing_direction,
+            new_direction,
+            turn_cost_cache,
+            nominal_speed,
+            turn_cost_weight,
+        )
+        if existing_cost + heading_change <= new_cost:
+            return True
+    return False
+
+
+def _dominated_arrivals(
+    arrivals,
+    new_direction,
+    new_cost,
+    turn_cost_cache,
+    nominal_speed,
+    turn_cost_weight,
+):
+    dominated = []
+    for existing_direction, existing_cost in arrivals.items():
+        heading_change = _cached_turn_cost(
+            new_direction,
+            existing_direction,
+            turn_cost_cache,
+            nominal_speed,
+            turn_cost_weight,
+        )
+        if new_cost + heading_change <= existing_cost:
+            dominated.append(existing_direction)
+    return dominated
+
+
+def _cached_turn_cost(
+    incoming_direction,
+    outgoing_direction,
+    turn_cost_cache,
+    nominal_speed,
+    turn_cost_weight,
+):
+    turn = (incoming_direction, outgoing_direction)
+    if turn not in turn_cost_cache:
+        turn_cost_cache[turn] = _turn_cost(
+            incoming_direction,
+            outgoing_direction,
+            nominal_speed,
+            turn_cost_weight,
+        )
+    return turn_cost_cache[turn]
+
+
 def _heuristic(cell, goal, fuel_rate):
     row_distance = goal[0] - cell[0]
     column_distance = goal[1] - cell[1]
     return math.hypot(row_distance, column_distance) * fuel_rate
 
 
-def _reconstruct_path(came_from, goal):
-    path = [goal]
-    current = goal
-    while current in came_from:
-        current = came_from[current]
-        path.append(current)
-    path.reverse()
-    return path
+def _reconstruct_path(came_from, goal_state):
+    states = [goal_state]
+    current_state = goal_state
+    while current_state in came_from:
+        current_state = came_from[current_state]
+        states.append(current_state)
+    states.reverse()
+    return [cell for cell, _ in states]
 
 
 def _validate_inputs(
