@@ -21,6 +21,7 @@ TRIAL_FIELDS = (
     "environment_seed",
     "sensor_seed",
     "sensor_scenario",
+    "sensor_scenario_name",
     "sensor_model",
     "free_probability",
     "occupied_probability",
@@ -162,6 +163,7 @@ def flatten_trial_result(
         "environment_seed": int(environment_seed),
         "sensor_seed": int(sensor_seed),
         "sensor_scenario": int(sensor_scenario),
+        "sensor_scenario_name": scenario["sensor_scenario_name"],
         "sensor_model": scenario["sensor_model"],
         "free_probability": probabilities["free"],
         "occupied_probability": probabilities["occupied"],
@@ -341,6 +343,10 @@ def summarize_trials(rows, base_seed, sensor_scenario):
             "control_saturation_fraction": _statistics(
                 planned_rows,
                 "control_saturation_fraction",
+            ),
+            "measurement_dropout_fraction": _statistics(
+                planned_rows,
+                "measurement_dropout_fraction",
             ),
             "true_occupied_time": _statistics(
                 planned_rows,

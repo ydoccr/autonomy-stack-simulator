@@ -1,0 +1,17 @@
+type: monte_carlo_campaign
+name: sensor_robustness_gaussian_plus_combined_faults_v1
+frozen: true
+trials: 500
+base_seed: 20260809
+sensor_scenario: 4
+workers: 8
+simulation_config: default.yaml
+mission_config: random_mission.yaml
+output_dir: ../results/qualification/sensor_robustness_v1/gaussian_plus_combined_faults
+criteria:
+  minimum_planning_success_rate: 0.90
+  minimum_mission_success_given_plan_rate: 0.98
+  maximum_false_completion_given_plan_rate: 0.02
+  maximum_safety_violation_given_plan_rate: 0.02
+  maximum_mean_cross_track_rmse: 0.06
+  maximum_mean_control_saturation_fraction: 0.01

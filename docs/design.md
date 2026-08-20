@@ -54,6 +54,22 @@ also evaluate the complete swept line segment between consecutive truth samples.
 Thus a brief prohibited crossing is detected even when both recorded endpoints
 and the interval midpoint are safe.
 
+## Sensor fault comparison
+
+The nominal sensor applies the Gaussian noise configured in the simulation
+input. Offset, delay, dropout, and combined-fault scenarios retain that same
+Gaussian noise rather than replacing it with noiseless measurements. Gaussian
+noise and dropout have separate deterministic random streams, allowing matched
+trials to reuse comparable Gaussian draws without coupling them to dropout
+decisions.
+
+The frozen sensor comparison uses the same environment and sensor seed pair for
+each scenario at a given trial index. Planning is independent of sensing, so
+matched scenarios must have identical planning outcomes. The comparison treats
+Gaussian plus 40% dropout as the primary research condition; isolated offset
+and delay cases help distinguish a dropout-specific effect from a general
+sensor-degradation effect, while the combined case exposes interactions.
+
 ## State-estimation covariance
 
 The linear Kalman filter uses the same four-state point-mass model and applied

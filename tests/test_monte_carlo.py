@@ -115,6 +115,7 @@ def fake_mission_runner(
         metrics=metrics,
         scenario={
             "sensor_model": "FakeSensor",
+            "sensor_scenario_name": f"fake_scenario_{scenario_number}",
             "zone_probabilities": ZONE_PROBABILITIES,
             "sensor_scenario": scenario_number,
             "environment_seed": environment_seed,
@@ -210,6 +211,7 @@ def test_flatten_trial_result_expands_zone_times():
     row = flatten_trial_result(0, 2, 3, 4, result)
 
     assert row["sensor_scenario"] == 4
+    assert row["sensor_scenario_name"] == "fake_scenario_4"
     assert row["sensor_model"] == "FakeSensor"
     assert row["true_free_time"] == 3.0
     assert row["true_occupied_time"] == 1.0

@@ -210,6 +210,7 @@ results/qualification/*
 !results/qualification/pilot_nominal_v1/
 !results/qualification/nominal_baseline_v1/
 !results/qualification/nominal_baseline_v2/
+!results/qualification/sensor_robustness_v1/
 
 # AI coding-agent metadata and instructions
 .agents/

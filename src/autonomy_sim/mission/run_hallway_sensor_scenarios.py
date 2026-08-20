@@ -11,7 +11,10 @@ from autonomy_sim.mission.run_hallway_mission import (
     DEFAULT_MISSION_CONFIG,
     run_hallway_mission,
 )
-from autonomy_sim.sensors.sensor_scenarios import create_sensor_scenario
+from autonomy_sim.sensors.sensor_scenarios import (
+    create_sensor_scenario,
+    sensor_scenario_name,
+)
 
 
 def run_hallway_sensor_scenario(
@@ -22,7 +25,12 @@ def run_hallway_sensor_scenario(
     show_plots=True,
     show_metrics=True,
 ):
-    sensor = create_sensor_scenario(scenario_number, random_seed)
+    sensor = create_sensor_scenario(
+        scenario_number,
+        random_seed,
+        pos_noise_std=simulation_config.sensor.pos_noise_std,
+        vel_noise_std=simulation_config.sensor.vel_noise_std,
+    )
     return run_hallway_mission(
         simulation_config,
         mission_config,
@@ -31,6 +39,7 @@ def run_hallway_sensor_scenario(
         sensor_model=sensor,
         scenario={
             "sensor_scenario": scenario_number,
+            "sensor_scenario_name": sensor_scenario_name(scenario_number),
             "sensor_seed": random_seed,
         },
     )

@@ -26,6 +26,7 @@ from autonomy_sim.mission.config import load_random_mission_config
 from autonomy_sim.mission.run_random_sensor_scenarios import (
     run_random_sensor_scenario,
 )
+from autonomy_sim.sensors.sensor_scenarios import sensor_scenario_name
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 CRITERION_NAMES = (
@@ -112,8 +113,13 @@ def load_campaign_config(path) -> CampaignConfig:
     )
 
 
-def run_campaign(campaign_config: CampaignConfig, *, overwrite=False):
-    git_state = _git_state()
+def run_campaign(
+    campaign_config: CampaignConfig,
+    *,
+    overwrite=False,
+    source_git_state=None,
+):
+    git_state = get_git_state() if source_git_state is None else source_git_state
     if campaign_config.frozen and git_state["dirty"]:
         raise RuntimeError("a frozen campaign requires a clean Git working tree")
 
@@ -140,7 +146,15 @@ def run_campaign(campaign_config: CampaignConfig, *, overwrite=False):
     duration_seconds = time.perf_counter() - start_time
     qualification = evaluate_qualification(summary, campaign_config.criteria)
     _write_json(output_dir / "qualification.json", qualification)
-    plot_campaign_summary(rows, summary, output_dir / "qualification_summary.png")
+    plot_campaign_summary(
+        rows,
+        summary,
+        output_dir / "qualification_summary.png",
+        title=(
+            f"{campaign_config.name}: "
+            f"{sensor_scenario_name(campaign_config.sensor_scenario)}"
+        ),
+    )
 
     manifest = {
         "schema_version": 1,
@@ -150,6 +164,9 @@ def run_campaign(campaign_config: CampaignConfig, *, overwrite=False):
             "trials": campaign_config.trials,
             "base_seed": campaign_config.base_seed,
             "sensor_scenario": campaign_config.sensor_scenario,
+            "sensor_scenario_name": sensor_scenario_name(
+                campaign_config.sensor_scenario
+            ),
             "workers": campaign_config.workers,
         },
         "execution": {
@@ -220,7 +237,9 @@ def evaluate_qualification(summary, criteria):
     }
 
 
-def plot_campaign_summary(rows, summary, output_path):
+def plot_campaign_summary(
+    rows, summary, output_path, *, title="Campaign qualification"
+):
     plt.switch_backend("Agg")
     figure, axes = plt.subplots(2, 2, figsize=(12, 8))
 
@@ -259,7 +278,7 @@ def plot_campaign_summary(rows, summary, output_path):
         "control_saturation_fraction",
         "Control saturation fraction",
     )
-    figure.suptitle("Nominal baseline qualification")
+    figure.suptitle(title)
     figure.tight_layout()
     figure.savefig(output_path, dpi=150)
     plt.close(figure)
@@ -294,6 +313,8 @@ def replay_trial(manifest_path, trial, *, output_path=None):
     )
     mismatches = {}
     for name, actual_value in actual.items():
+        if name not in expected:
+            continue
         expected_value = _coerce_expected(expected[name], actual_value)
         if not _values_match(expected_value, actual_value):
             mismatches[name] = {"expected": expected_value, "actual": actual_value}
@@ -332,7 +353,7 @@ def _archive_inputs(config, inputs_dir):
     return metadata
 
 
-def _git_state():
+def get_git_state():
     commit = _git_command("rev-parse", "HEAD")
     status = _git_command("status", "--porcelain", "--untracked-files=all")
     return {"commit": commit, "dirty": bool(status)}

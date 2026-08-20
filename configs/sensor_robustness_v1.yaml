@@ -1,0 +1,11 @@
+type: sensor_comparison_campaign
+name: sensor_robustness_v1
+frozen: true
+primary_sensor_scenario: 3
+campaign_configs:
+  - sensor_robustness_nominal_v1.yaml
+  - sensor_robustness_offset_v1.yaml
+  - sensor_robustness_delay_v1.yaml
+  - sensor_robustness_dropout_v1.yaml
+  - sensor_robustness_combined_v1.yaml
+output_dir: ../results/qualification/sensor_robustness_v1

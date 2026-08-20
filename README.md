@@ -71,13 +71,15 @@ python -m autonomy_sim.experiments.run_planned_mission
 
 ## Sensor fault scenarios
 
-The hallway and random missions can also run with one of four sensor fault
-scenarios:
+The hallway and random missions can run with nominal Gaussian sensing or one of
+four additive fault scenarios. Every degraded scenario retains the configured
+Gaussian position and velocity noise:
 
-1. Fixed position offset of `(0.2, -0.3)`
-2. Measurements delayed by three simulation steps
-3. Each measurement has a 40% chance of being dropped
-4. Offset, delay, dropout, and Gaussian noise combined
+0. `gaussian_nominal`: configured Gaussian noise
+1. `gaussian_plus_offset`: Gaussian noise plus fixed position offset `(0.2, -0.3)`
+2. `gaussian_plus_delay`: Gaussian noise plus a three-step measurement delay
+3. `gaussian_plus_dropout`: Gaussian noise plus 40% measurement dropout
+4. `gaussian_plus_combined_faults`: Gaussian noise, offset, delay, and dropout
 
 Run a hallway scenario by passing a number from 1 through 4:
 
@@ -117,8 +119,10 @@ python -m autonomy_sim.experiments.run_monte_carlo --trials 10 --base-seed 7 --s
 ```
 
 Sensor scenario `0` is the configured nominal Gaussian sensor. Scenarios `1`
-through `4` are the degradation models listed above. Independent environment
-and sensor seeds are generated for every trial.
+through `4` are the additive degradation models listed above. Independent
+environment and sensor seeds are generated for every trial. Gaussian noise and
+dropout use separate deterministic random streams so dropout decisions do not
+change the Gaussian draw sequence.
 
 The runner writes one row per attempted trial to
 `results/monte_carlo/trials.csv` and aggregate counts, rates, and statistics to
@@ -177,6 +181,22 @@ runtime metadata in `manifest.json`, per-trial CSV data, aggregate statistics
 and Wilson 95% confidence intervals, explicit gate results, and a summary plot.
 Frozen campaigns require a clean Git tree and refuse to overwrite existing
 results.
+
+The sensor-robustness comparison runs 500 matched environment and sensor seed
+pairs under all five sensor scenarios. Dropout is the primary research
+condition; offset, delay, and combined faults provide context and interaction
+checks. Every child campaign uses the same qualification gates as a common
+reference requirement, so a degraded campaign may legitimately fail a gate.
+
+```powershell
+python -m autonomy_sim.experiments.run_sensor_comparison --comparison-config configs/sensor_robustness_v1.yaml
+```
+
+The comparison writes complete per-scenario evidence, a long-form paired trial
+table, degraded-minus-nominal paired deltas, mission-outcome transitions, and a
+summary plot to `results/qualification/sensor_robustness_v1/`. Commit the code
+and campaign configurations first, run from that clean commit, and preserve it
+in history so the recorded commit remains resolvable.
 
 Any recorded trial can be regenerated from its archived inputs and seeds, then
 compared field-by-field with its original row:
