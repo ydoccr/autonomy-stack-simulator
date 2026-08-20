@@ -1,0 +1,42 @@
+{
+  "gates": {
+    "maximum_false_completion_given_plan_rate": {
+      "observed": 0.021739130434782608,
+      "operator": "<=",
+      "passed": false,
+      "threshold": 0.02
+    },
+    "maximum_mean_control_saturation_fraction": {
+      "observed": 0.0,
+      "operator": "<=",
+      "passed": true,
+      "threshold": 0.01
+    },
+    "maximum_mean_cross_track_rmse": {
+      "observed": 0.049546163418700925,
+      "operator": "<=",
+      "passed": true,
+      "threshold": 0.06
+    },
+    "maximum_safety_violation_given_plan_rate": {
+      "observed": 0.002173913043478261,
+      "operator": "<=",
+      "passed": true,
+      "threshold": 0.02
+    },
+    "minimum_mission_success_given_plan_rate": {
+      "observed": 0.9760869565217392,
+      "operator": ">=",
+      "passed": false,
+      "threshold": 0.98
+    },
+    "minimum_planning_success_rate": {
+      "observed": 0.92,
+      "operator": ">=",
+      "passed": true,
+      "threshold": 0.9
+    }
+  },
+  "passed": false,
+  "status": "failed"
+}

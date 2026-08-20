@@ -1,0 +1,110 @@
+{
+  "confidence_intervals_95": {
+    "false_completion_given_plan": {
+      "lower": 0.0,
+      "upper": 0.008281835846370746
+    },
+    "planning_success": {
+      "lower": 0.8928936834221488,
+      "upper": 0.9407018705901475
+    },
+    "safety_violation_given_plan": {
+      "lower": 0.0,
+      "upper": 0.008281835846370746
+    },
+    "true_mission_success_given_plan": {
+      "lower": 0.9917181641536291,
+      "upper": 0.9999999999999999
+    }
+  },
+  "configuration": {
+    "base_seed": 20260809,
+    "sensor_scenario": 2,
+    "trials": 500
+  },
+  "counts": {
+    "false_completion": 0,
+    "onboard_completion": 460,
+    "planning_success": 460,
+    "safety_violation": 0,
+    "true_mission_success": 460
+  },
+  "rates": {
+    "false_completion_given_plan": 0.0,
+    "onboard_completion": 0.92,
+    "planning_success": 0.92,
+    "safety_violation": 0.0,
+    "safety_violation_given_plan": 0.0,
+    "true_mission_success": 0.92,
+    "true_mission_success_given_plan": 1.0
+  },
+  "statistics": {
+    "applied_control_effort": {
+      "count": 460,
+      "max": 9.977149905685842,
+      "mean": 6.175748717245034,
+      "median": 6.070091448415975,
+      "min": 5.000461907301582
+    },
+    "commanded_control_effort": {
+      "count": 460,
+      "max": 9.977149905685842,
+      "mean": 6.175748717245032,
+      "median": 6.070091448415975,
+      "min": 5.000461907301582
+    },
+    "completion_time": {
+      "count": 460,
+      "max": 110.10000000000001,
+      "mean": 70.61434782608696,
+      "median": 69.3,
+      "min": 57.400000000000006
+    },
+    "control_saturation_fraction": {
+      "count": 460,
+      "max": 0.0,
+      "mean": 0.0,
+      "median": 0.0,
+      "min": 0.0
+    },
+    "measurement_dropout_fraction": {
+      "count": 460,
+      "max": 0.0,
+      "mean": 0.0,
+      "median": 0.0,
+      "min": 0.0
+    },
+    "minimum_true_clearance": {
+      "count": 460,
+      "max": 0.5306608717958046,
+      "mean": 0.17323201629897295,
+      "median": 0.1573478409765663,
+      "min": 0.054855628912802365
+    },
+    "rmse_estimation_error": {
+      "count": 460,
+      "max": 0.09808388831572,
+      "mean": 0.08702900014548397,
+      "median": 0.08692832318354207,
+      "min": 0.07625113822109063
+    },
+    "rmse_true_cross_track_error": {
+      "count": 460,
+      "max": 0.06026612034363847,
+      "mean": 0.041818368300100016,
+      "median": 0.04143558266247273,
+      "min": 0.026238643080922802
+    },
+    "true_occupied_time": {
+      "count": 460,
+      "max": 17.400000000000006,
+      "mean": 1.9093478260869567,
+      "median": 0.6000000000000014,
+      "min": 0.0
+    }
+  },
+  "termination_counts": {
+    "goal_reached": 460,
+    "planning_failure": 40
+  }
+}

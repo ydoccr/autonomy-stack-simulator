@@ -1,0 +1,55 @@
+{
+  "artifacts": {
+    "plot": "qualification_summary.png",
+    "qualification": "qualification.json",
+    "summary": "summary.json",
+    "trials": "trials.csv"
+  },
+  "campaign": {
+    "base_seed": 20260809,
+    "frozen": true,
+    "name": "sensor_robustness_gaussian_nominal_v1",
+    "sensor_scenario": 0,
+    "sensor_scenario_name": "gaussian_nominal",
+    "trials": 500,
+    "workers": 8
+  },
+  "code": {
+    "commit": "67fca28c16c20356780ca20cccd15c875157c008",
+    "dirty": false
+  },
+  "execution": {
+    "command": "python -m autonomy_sim.experiments.run_campaign run --campaign-config C:\\Users\\codyw\\Documents\\GitHub\\autonomy-stack-simulator\\configs\\sensor_robustness_nominal_v1.yaml",
+    "completed_at_utc": "2026-08-20T08:36:17.191403+00:00",
+    "duration_seconds": 408.9854454000015,
+    "started_at_utc": "2026-08-20T08:29:27.515157+00:00"
+  },
+  "inputs": {
+    "campaign": {
+      "archived": "inputs\\campaign.yaml",
+      "sha256": "3e321480a61955f0b024bb02bd7068344285dd95d430c66578696368a9e39ac0",
+      "source": "C:\\Users\\codyw\\Documents\\GitHub\\autonomy-stack-simulator\\configs\\sensor_robustness_nominal_v1.yaml"
+    },
+    "mission": {
+      "archived": "inputs\\mission.yaml",
+      "sha256": "05bf4d6d31c6a69bf1ebe85261f5fd32be05a692b34b15c40a95ddfa8fd84eab",
+      "source": "C:\\Users\\codyw\\Documents\\GitHub\\autonomy-stack-simulator\\configs\\random_mission.yaml"
+    },
+    "simulation": {
+      "archived": "inputs\\simulation.yaml",
+      "sha256": "6bfc95cacd0fdcc7aa9dfd9c366e061aaed117da3d416158a3a4f86f9588b5db",
+      "source": "C:\\Users\\codyw\\Documents\\GitHub\\autonomy-stack-simulator\\configs\\default.yaml"
+    }
+  },
+  "qualification_passed": true,
+  "runtime": {
+    "packages": {
+      "PyYAML": "6.0.3",
+      "matplotlib": "3.11.0",
+      "numpy": "2.5.1"
+    },
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.1"
+  },
+  "schema_version": 1
+}
